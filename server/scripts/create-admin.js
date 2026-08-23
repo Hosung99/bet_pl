@@ -39,7 +39,7 @@ function readPassword(prompt) {
 
 try {
   const password = await readPassword('Admin password: ')
-  if (password.length < 8) throw new Error('비밀번호는 8자 이상이어야 합니다.')
+  if (password.length < 8 || password.length > 12) throw new Error('비밀번호는 8~12자여야 합니다.')
   const passwordHash = await bcrypt.hash(password, 12)
   const user = await transaction((client) => createUser(client, { username, passwordHash, role: 'ADMIN' }))
   console.log(`Admin created: ${user.username}`)

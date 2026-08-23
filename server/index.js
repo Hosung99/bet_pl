@@ -31,12 +31,12 @@ app.use(helmet({
 app.use(express.json({ limit: '32kb' }))
 app.use(authenticate)
 
-const loginLimiter = rateLimit({
+const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1_000,
   limit: 50,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  message: { error: '로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.' },
+  message: { error: '인증 요청이 너무 많습니다. 잠시 후 다시 시도하세요.' },
 })
 
 function validUsername(username) {
@@ -44,7 +44,11 @@ function validUsername(username) {
 }
 
 function validPassword(password) {
-  return typeof password === 'string' && password.length >= 8 && password.length <= 100
+  return typeof password === 'string' && password.length >= 8 && password.length <= 12
+}
+
+function validLoginPassword(password) {
+  return typeof password === 'string' && password.length > 0 && password.length <= 100
 }
 
 function cleanUser(user) {
@@ -67,10 +71,30 @@ app.get('/api/health', async (_req, res) => {
   }
 })
 
-app.post('/api/auth/login', loginLimiter, async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   const { username, password } = req.body || {}
   if (!validUsername(username) || !validPassword(password)) {
-    return res.status(400).json({ error: '아이디와 8자 이상의 비밀번호를 확인하세요.' })
+    return res.status(400).json({ error: '아이디와 8~12자 비밀번호를 확인하세요.' })
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12)
+  try {
+    const { user, token } = await transaction(async (client) => {
+      const user = await createUser(client, { username, passwordHash })
+      return { user, token: await startSession(client, user.id) }
+    })
+    res.setHeader('Set-Cookie', sessionCookie(token))
+    res.status(201).json({ user: cleanUser(user) })
+  } catch (error) {
+    if (error.code === '23505') return res.status(409).json({ error: '이미 존재하는 아이디입니다.' })
+    throw error
+  }
+})
+
+app.post('/api/auth/login', authLimiter, async (req, res) => {
+  const { username, password } = req.body || {}
+  if (!validUsername(username) || !validLoginPassword(password)) {
+    return res.status(400).json({ error: '아이디와 비밀번호를 확인하세요.' })
   }
 
   const result = await pool.query(
@@ -261,7 +285,7 @@ app.get('/api/admin/users', requireAdmin, async (_req, res) => {
 app.post('/api/admin/users', requireAdmin, async (req, res) => {
   const { username, password, role = 'MEMBER' } = req.body || {}
   if (!validUsername(username) || !validPassword(password) || !['ADMIN', 'MEMBER'].includes(role)) {
-    return res.status(400).json({ error: '아이디, 8자 이상 비밀번호와 역할을 확인하세요.' })
+    return res.status(400).json({ error: '아이디, 8~12자 비밀번호와 역할을 확인하세요.' })
   }
   const passwordHash = await bcrypt.hash(password, 12)
   try {
@@ -314,7 +338,7 @@ app.post('/api/admin/users/:userId/points', requireAdmin, async (req, res) => {
 
 app.post('/api/admin/users/:userId/password', requireAdmin, async (req, res) => {
   const password = req.body?.password
-  if (!validPassword(password)) return res.status(400).json({ error: '비밀번호는 8자 이상이어야 합니다.' })
+  if (!validPassword(password)) return res.status(400).json({ error: '비밀번호는 8~12자여야 합니다.' })
   const passwordHash = await bcrypt.hash(password, 12)
   const result = await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, req.params.userId])
   if (!result.rowCount) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' })

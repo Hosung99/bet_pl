@@ -84,6 +84,8 @@ input::placeholder { color: #647b8c; }
 .login-form .full-button { min-height: 54px; display: flex; align-items: center; justify-content: space-between; color: var(--login-ink); background: var(--login-amber); border-radius: 0; }
 .login-form .full-button::after { content: "↗"; font-size: 19px; }
 .login-form .full-button:not(:disabled):hover { color: white; background: var(--login-ink); }
+.auth-switch { width: 100%; margin-top: 15px; padding: 7px; color: #506b7a; background: transparent; border: 0; font-size: 12px; font-weight: 800; text-decoration: underline; text-underline-offset: 4px; }
+.auth-switch:not(:disabled):hover { color: var(--login-ink); }
 .pass-footer { min-height: 60px; padding: 13px 22px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px; color: #557180; border-top: 1px dashed #8aa0ad; font: 700 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; }
 .pass-footer > b { grid-row: 1 / 3; grid-column: 2; color: var(--login-ink); font-size: 10px; }
 .pass-bars::before { content: "││┃│ ┃││┃ ┃│││┃"; color: var(--login-ink); font-size: 16px; letter-spacing: -.12em; }

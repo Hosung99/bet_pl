@@ -68,6 +68,7 @@ function TeamCrest({ src, name }) {
 function Login({ onLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [registering, setRegistering] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -76,10 +77,13 @@ function Login({ onLogin }) {
     setLoading(true);
     setError("");
     try {
-      const result = await api("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ username, password }),
-      });
+      const result = await api(
+        registering ? "/api/auth/register" : "/api/auth/login",
+        {
+          method: "POST",
+          body: JSON.stringify({ username, password }),
+        },
+      );
       onLogin(result.user);
     } catch (requestError) {
       setError(requestError.message);
@@ -119,7 +123,10 @@ function Login({ onLogin }) {
           <div className="pass-header">
             <div className="pass-brand">
               <span className="brand-mark">BP</span>
-              <span><strong>BET-PL</strong><small>PLAYER ACCESS</small></span>
+              <span>
+                <strong>BET-PL</strong>
+                <small>{registering ? "NEW PLAYER" : "PLAYER ACCESS"}</small>
+              </span>
             </div>
             <b>26/27</b>
           </div>
@@ -128,24 +135,35 @@ function Login({ onLogin }) {
             <span>ZONE <b>SEOUL</b></span>
           </div>
           <div className="pass-body">
-            <p className="eyebrow">MATCHDAY CREDENTIAL</p>
-            <h2>매치룸 입장</h2>
-            <p className="muted">관리자가 발급한 계정으로 입장하세요.</p>
+            <p className="eyebrow">
+              {registering ? "NEW PLAYER SIGNING" : "MATCHDAY CREDENTIAL"}
+            </p>
+            <h2>{registering ? "회원가입" : "매치룸 입장"}</h2>
+            <p className="muted">
+              {registering
+                ? "사용할 아이디와 비밀번호를 입력하세요."
+                : "아이디와 비밀번호로 입장하세요."}
+            </p>
             <label>
               <span>아이디</span>
               <input
                 autoComplete="username"
+                minLength="2"
+                maxLength="40"
+                pattern="[a-zA-Z0-9._-]{2,40}"
+                title="영문, 숫자, 점, 밑줄, 하이픈으로 2~40자"
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 required
               />
             </label>
             <label>
-              <span>비밀번호</span>
+              <span>{registering ? "비밀번호 (8~12자)" : "비밀번호"}</span>
               <input
                 type="password"
-                autoComplete="current-password"
-                minLength="8"
+                autoComplete={registering ? "new-password" : "current-password"}
+                minLength={registering ? 8 : 1}
+                maxLength={registering ? 12 : 100}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required
@@ -157,11 +175,33 @@ function Login({ onLogin }) {
               </p>
             )}
             <button className="primary-button full-button" disabled={loading}>
-              {loading ? "입장 확인 중…" : "매치룸 입장"}
+              {loading
+                ? registering
+                  ? "가입 중…"
+                  : "입장 확인 중…"
+                : registering
+                  ? "가입하고 입장"
+                  : "매치룸 입장"}
+            </button>
+            <button
+              className="auth-switch"
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                setRegistering((current) => !current);
+                setPassword("");
+                setError("");
+              }}
+            >
+              {registering
+                ? "이미 계정이 있나요? 로그인"
+                : "계정이 없나요? 회원가입"}
             </button>
           </div>
           <div className="pass-footer" aria-hidden="true">
-            <span>AUTHORIZED PLAYERS ONLY</span>
+            <span>
+              {registering ? "NEW PLAYERS WELCOME" : "AUTHORIZED PLAYERS ONLY"}
+            </span>
             <span className="pass-bars" />
             <b>BP-PL-26</b>
           </div>
@@ -790,7 +830,7 @@ function UserRow({ entry, currentUser, run, notify }) {
 
   async function resetPassword() {
     const password = window.prompt(
-      `${entry.username}의 새 비밀번호를 입력하세요. (8자 이상)`,
+      `${entry.username}의 새 비밀번호를 입력하세요. (8~12자)`,
     );
     if (!password) return;
     try {
@@ -983,7 +1023,8 @@ function Admin({ users, matches, currentUser, reload, notify }) {
             <input
               type="password"
               minLength="8"
-              placeholder="비밀번호 8자 이상"
+              maxLength="12"
+              placeholder="비밀번호 8~12자"
               value={form.password}
               onChange={(event) =>
                 setForm({ ...form, password: event.target.value })
