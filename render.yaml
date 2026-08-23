@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: match-pot
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: pnpm install --frozen-lockfile && pnpm build
+    startCommand: pnpm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: FOOTBALL_DATA_TOKEN
+        sync: false
