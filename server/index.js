@@ -116,7 +116,14 @@ app.get('/api/matches', requireAuth, async (req, res) => {
        COALESCE(SUM(b.stake) FILTER (WHERE b.status <> 'CANCELLED' AND b.prediction = 'DRAW'), 0) AS draw_pool,
        COALESCE(SUM(b.stake) FILTER (WHERE b.status <> 'CANCELLED' AND b.prediction = 'AWAY'), 0) AS away_pool,
        mine.prediction AS my_prediction, mine.stake AS my_stake,
-       mine.status AS my_bet_status, mine.payout AS my_payout
+       mine.status AS my_bet_status, mine.payout AS my_payout,
+       ARRAY(
+         SELECT u.username
+         FROM bets participant
+         JOIN users u ON u.id = participant.user_id
+         WHERE participant.match_id = m.id AND participant.status <> 'CANCELLED'
+         ORDER BY u.username
+       ) AS bettors
      FROM matches m
      LEFT JOIN bets b ON b.match_id = m.id
      LEFT JOIN bets mine ON mine.match_id = m.id AND mine.user_id = $1
@@ -136,8 +143,8 @@ app.put('/api/bets/:matchId', requireAuth, async (req, res) => {
   if (!Number.isSafeInteger(matchId) || !['HOME', 'DRAW', 'AWAY'].includes(prediction)) {
     return res.status(400).json({ error: '경기와 예측을 확인하세요.' })
   }
-  if (!Number.isSafeInteger(stake) || stake <= 0 || stake > 1_000_000_000) {
-    return res.status(400).json({ error: '베팅 포인트는 1 이상의 정수여야 합니다.' })
+  if (!Number.isSafeInteger(stake) || stake <= 0 || stake % 100 !== 0 || stake > 1_000_000_000) {
+    return res.status(400).json({ error: '베팅 포인트는 100P 단위로 입력하세요.' })
   }
 
   const response = await transaction(async (client) => {
@@ -359,7 +366,7 @@ app.use((error, _req, res, _next) => {
 async function start() {
   const schema = fs.readFileSync(path.join(root, 'schema.sql'), 'utf8')
   await pool.query(schema)
-  const server = app.listen(port, () => console.log(`Match Pot listening on ${port}`))
+  const server = app.listen(port, () => console.log(`BET-PL listening on ${port}`))
   process.on('SIGTERM', () => {
     server.close(() => pool.end())
   })

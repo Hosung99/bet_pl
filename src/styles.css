@@ -44,31 +44,52 @@ h1, h2, h3, p { margin-top: 0; }
 .brand-large .brand-mark { width: 58px; height: 58px; font-size: 22px; }
 .brand-large strong { font-size: 25px; }
 
-.login-page { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(360px, .55fr); }
-.login-pitch { position: relative; min-height: 620px; padding: clamp(28px, 5vw, 72px); display: flex; flex-direction: column; overflow: hidden; background: #173e72; isolation: isolate; }
-.login-pitch::before { content: ""; position: absolute; inset: 0; z-index: -2; background: radial-gradient(circle at 18% -10%, rgb(89 208 196 / 35%), transparent 35%), linear-gradient(145deg, transparent 20%, rgb(255 202 67 / 8%) 20% 40%, transparent 40%); }
-.login-pitch::after { content: ""; position: absolute; inset: 0; z-index: -1; opacity: .22; background-image: repeating-linear-gradient(90deg, transparent 0 78px, rgb(255 255 255 / 9%) 79px 80px); }
-.login-copy { position: relative; z-index: 2; margin: auto 0 8vh; }
-.login-copy h1 { max-width: 740px; margin-bottom: 26px; font: 950 clamp(58px, 8.2vw, 126px)/.82 "Arial Narrow", Impact, sans-serif; letter-spacing: -.06em; text-transform: uppercase; text-shadow: 0 6px 0 rgb(10 28 71 / 22%); }
-.login-copy > p:last-child { color: #d9e6ed; font-size: clamp(16px, 1.5vw, 21px); line-height: 1.65; }
-.pitch-lines { position: absolute; right: -15%; bottom: -34%; width: 72%; aspect-ratio: 1.5; border: 2px solid rgb(237 244 241 / 22%); border-radius: 50%; transform: rotate(-12deg); }
-.pitch-lines::before, .pitch-lines::after, .pitch-lines span { content: ""; position: absolute; border: 2px solid rgb(237 244 241 / 22%); }
-.pitch-lines::before { inset: -130% 25% 60%; }
-.pitch-lines::after { width: 18px; height: 18px; border-radius: 50%; left: calc(50% - 9px); top: calc(50% - 9px); background: var(--coral); box-shadow: 0 0 35px var(--coral); }
-.pitch-lines span { left: 50%; top: -120%; height: 250%; border-width: 0 0 0 2px; }
-.login-panel { padding: 40px clamp(28px, 5vw, 70px); display: grid; align-items: center; color: var(--ink); background: var(--ticket); border-left: 10px solid var(--lime); }
-.login-form { width: min(100%, 420px); margin: auto; }
-.login-form h2 { margin-bottom: 8px; font: 900 42px/.95 "Arial Narrow", Impact, sans-serif; letter-spacing: -.03em; }
-.login-form > .muted { margin-bottom: 38px; font-size: 14px; }
-.login-form label { display: block; margin-bottom: 20px; }
-.login-form .eyebrow { color: #c84d31; }
-.login-form .muted { color: #66708c; }
-.login-form label span { display: block; margin-bottom: 9px; color: #4f5c7d; font-size: 12px; font-weight: 800; }
+.login-page { --login-night: #061522; --login-ink: #102c41; --login-steel: #7894a6; --login-fog: #e7f3f7; --login-white: #f7fafb; --login-amber: #ffb24c; position: relative; min-height: 100svh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(430px, 540px); overflow: hidden; background-color: var(--login-night); background-image: url("./assets/bet-pl-tunnel.jpg"); background-position: center; background-size: cover; isolation: isolate; }
+.login-page::before { content: ""; position: absolute; inset: 0; z-index: -1; background: rgb(2 10 17 / 28%); }
+.login-pitch { position: relative; min-height: 100svh; padding: clamp(28px, 4.5vw, 72px); display: flex; flex-direction: column; border-right: 1px solid rgb(231 243 247 / 18%); }
+.login-brand { color: var(--login-white); }
+.login-brand .brand-mark { color: var(--login-ink); background: var(--login-amber); box-shadow: 0 8px 26px rgb(0 0 0 / 28%); }
+.login-brand small { color: #c3d5de; }
+.login-copy { max-width: 810px; margin: auto 0 8vh; animation: tunnel-in .75s cubic-bezier(.2,.7,.2,1) both; }
+.matchday-label { width: fit-content; margin-bottom: 22px; padding: 9px 12px; color: var(--login-fog); border: 1px solid rgb(231 243 247 / 40%); font: 800 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .16em; }
+.matchday-label span { margin-right: 10px; color: var(--login-amber); }
+.login-copy h1 { max-width: 800px; margin-bottom: 28px; color: var(--login-white); font: 950 clamp(68px, 8.8vw, 142px)/.78 "Arial Narrow", Impact, sans-serif; letter-spacing: -.065em; text-transform: uppercase; text-shadow: 0 8px 28px rgb(0 0 0 / 36%); }
+.login-copy h1 strong { display: block; color: var(--login-amber); font: inherit; }
+.login-copy > p:last-child { max-width: 510px; margin: 0; color: #d5e5ec; font-size: clamp(15px, 1.25vw, 19px); font-weight: 650; line-height: 1.65; text-wrap: balance; }
+.tunnel-status { display: flex; flex-wrap: wrap; gap: 12px 24px; color: #b7ccd6; font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .15em; }
+.tunnel-status span { padding-left: 12px; border-left: 3px solid var(--login-amber); }
+.login-panel { min-width: 0; padding: clamp(24px, 4vw, 56px); display: grid; align-items: center; background: rgb(3 13 22 / 64%); backdrop-filter: blur(10px); }
+.login-form { width: min(100%, 430px); margin: auto; color: var(--login-ink); background: var(--login-fog); border-top: 6px solid var(--login-amber); box-shadow: 0 28px 80px rgb(0 0 0 / 42%); transform: rotate(.45deg); animation: pass-in .65s .12s cubic-bezier(.2,.7,.2,1) both; }
+.pass-header { min-height: 84px; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; color: var(--login-white); background: var(--login-ink); }
+.pass-header > b { color: var(--login-amber); font: 900 22px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.pass-brand { display: flex; align-items: center; gap: 11px; }
+.pass-brand .brand-mark { width: 40px; height: 40px; color: var(--login-ink); background: var(--login-amber); font-size: 15px; }
+.pass-brand strong, .pass-brand small { display: block; }
+.pass-brand strong { font: 900 18px/.9 "Arial Narrow", Impact, sans-serif; letter-spacing: .04em; }
+.pass-brand small { margin-top: 5px; color: #a9c0cb; font: 700 8px/1 ui-monospace, monospace; letter-spacing: .14em; }
+.pass-details { min-height: 56px; padding: 11px 22px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 18px; color: #486675; background: #d8e5ea; border-bottom: 1px dashed #8aa0ad; font: 700 9px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
+.pass-details span:last-child { text-align: right; }
+.pass-details b { display: block; margin-top: 2px; color: var(--login-ink); font-size: 10px; }
+.pass-body { padding: 34px 34px 30px; }
+.login-form h2 { margin-bottom: 8px; font: 950 46px/.92 "Arial Narrow", Impact, sans-serif; letter-spacing: -.04em; }
+.login-form .eyebrow { color: #b44b1c; }
+.login-form .muted { margin-bottom: 30px; color: #506b7a; font-size: 13px; }
+.login-form label { display: block; margin-bottom: 18px; }
+.login-form label span { display: block; margin-bottom: 8px; color: #3e5d6e; font-size: 11px; font-weight: 850; }
 input, select { width: 100%; min-height: 44px; padding: 0 13px; color: var(--paper); background: #111b3b; border: 1px solid var(--line); border-radius: 4px; }
 input::placeholder { color: #647b8c; }
-.login-form input { min-height: 54px; color: var(--ink); background: #fffdf8; border-color: #b7b7bd; font-size: 16px; }
+.login-form input { min-height: 52px; color: var(--login-ink); background: var(--login-white); border: 1px solid #94aab6; border-bottom: 3px solid #456679; border-radius: 0; font-size: 16px; transition: background .16s ease, border-color .16s ease; }
+.login-form input:focus { background: white; border-color: var(--login-ink); }
 .form-error { padding: 11px 13px; color: #8d291b; background: #f8d8d0; border-left: 3px solid var(--coral); font-size: 13px; }
-.login-note { display: block; margin-top: 18px; color: #72798b; text-align: center; line-height: 1.5; }
+.login-form .full-button { min-height: 54px; display: flex; align-items: center; justify-content: space-between; color: var(--login-ink); background: var(--login-amber); border-radius: 0; }
+.login-form .full-button::after { content: "↗"; font-size: 19px; }
+.login-form .full-button:not(:disabled):hover { color: white; background: var(--login-ink); }
+.pass-footer { min-height: 60px; padding: 13px 22px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 12px; color: #557180; border-top: 1px dashed #8aa0ad; font: 700 8px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; }
+.pass-footer > b { grid-row: 1 / 3; grid-column: 2; color: var(--login-ink); font-size: 10px; }
+.pass-bars::before { content: "││┃│ ┃││┃ ┃│││┃"; color: var(--login-ink); font-size: 16px; letter-spacing: -.12em; }
+
+@keyframes tunnel-in { from { opacity: 0; transform: translateY(24px); } }
+@keyframes pass-in { from { opacity: 0; transform: translateX(30px) rotate(.45deg); } }
 
 .primary-button, .small-button { border: 0; border-radius: 3px; color: var(--night); background: var(--lime); font-weight: 900; transition: background .18s ease, transform .18s ease; }
 .primary-button { min-height: 44px; padding: 0 20px; }
@@ -109,8 +130,14 @@ input::placeholder { color: #647b8c; }
 .hero-fixture > div:last-child { flex-direction: row-reverse; text-align: right; }
 .hero-fixture .team-crest, .hero-fixture .crest-fallback { width: clamp(60px, 7vw, 96px); height: clamp(60px, 7vw, 96px); flex: 0 0 auto; }
 .hero-fixture strong { font: 950 clamp(28px, 4vw, 55px)/.88 "Arial Narrow", Impact, sans-serif; letter-spacing: -.05em; }
+.hero-team-name { display: flex; flex-direction: column; gap: 8px; }
+.hero-team-name small, .team-name small { color: #6e7890; font: 800 9px/1 ui-monospace, monospace; letter-spacing: .14em; }
 .hero-fixture .crest-fallback { color: var(--ink); background: #e3dbce; border-color: #b8b0a5; }
 .versus { padding: 8px; color: #c34a30; font: 900 17px/1 ui-monospace, monospace; border-top: 2px solid #c34a30; border-bottom: 2px solid #c34a30; }
+.hero-nav { margin-top: 28px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.hero-nav button { width: 34px; height: 34px; color: var(--ink); background: transparent; border: 1px solid #a9a296; border-radius: 50%; }
+.hero-nav button:not(:disabled):hover { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+.hero-nav span { min-width: 42px; text-align: center; font: 800 10px/1 ui-monospace, monospace; }
 .hero-board { display: grid; color: var(--paper); background: #162350; border-left: 2px dashed #bcb4a8; }
 .stat { padding: 27px; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid var(--line); }
 .stat:last-child { border-bottom: 0; }
@@ -146,6 +173,7 @@ input::placeholder { color: #647b8c; }
 .jackpot { margin-left: auto; color: white; background: var(--coral); padding: 4px 8px; font: 900 9px/1 ui-monospace, monospace; transform: rotate(-1deg); }
 .match-teams { min-height: 125px; padding: 22px; display: grid; grid-template-columns: 1fr 60px 1fr; align-items: center; gap: 10px; }
 .team { min-width: 0; display: flex; align-items: center; gap: 12px; }
+.team-name { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .team strong { font-size: 15px; line-height: 1.2; }
 .away-team { flex-direction: row-reverse; text-align: right; }
 .team-crest, .crest-fallback { width: 45px; height: 45px; object-fit: contain; }
@@ -172,6 +200,9 @@ input::placeholder { color: #647b8c; }
 .my-ticket strong { color: var(--paper); }
 .my-ticket em { margin-left: auto; color: var(--lime); font-style: normal; font-weight: 900; }
 .my-ticket em.lost { color: var(--coral); }
+.bettors { min-height: 38px; padding: 9px 16px; display: flex; align-items: center; gap: 10px; color: #68738a; background: #f3ece2; border-top: 1px dashed #c8beb1; font-size: 10px; }
+.bettors span { flex: 0 0 auto; font: 800 9px/1 ui-monospace, monospace; letter-spacing: .12em; }
+.bettors strong { overflow-wrap: anywhere; color: var(--ink); }
 .match-locked:hover { transform: none; }
 
 .empty { min-height: 330px; display: grid; place-content: center; text-align: center; border: 1px dashed var(--line); color: var(--muted); }
@@ -229,8 +260,10 @@ input::placeholder { color: #647b8c; }
 @keyframes programme-in { from { opacity: 0; transform: translateY(18px) rotateX(2deg); } }
 
 @media (max-width: 980px) {
-  .login-page { grid-template-columns: 1fr 420px; }
-  .login-copy h1 { font-size: 68px; }
+  .login-page { grid-template-columns: minmax(0, 1fr) 420px; background-position: 42% center; }
+  .login-pitch { padding: 34px; }
+  .login-copy h1 { font-size: clamp(62px, 8.5vw, 86px); }
+  .login-panel { padding: 28px; }
   .topbar { grid-template-columns: 200px 1fr auto; padding-inline: 20px; }
   .topbar nav button { padding: 0 9px; }
   .topbar nav button::after { right: 9px; left: 9px; }
@@ -245,12 +278,21 @@ input::placeholder { color: #647b8c; }
 }
 
 @media (max-width: 720px) {
-  .login-page { grid-template-columns: 1fr; }
-  .login-pitch { min-height: 360px; padding: 26px; }
-  .login-copy { margin: auto 0 0; }
-  .login-copy h1 { margin-bottom: 14px; font-size: clamp(50px, 15vw, 76px); }
-  .login-copy > p:last-child { display: none; }
-  .login-panel { min-height: 520px; padding: 44px 24px; border-top: 10px solid var(--lime); border-left: 0; }
+  .login-page { min-height: 100svh; grid-template-columns: 1fr; overflow: visible; background-position: 34% top; background-size: auto 58svh; background-repeat: no-repeat; }
+  .login-page::before { height: 58svh; bottom: auto; }
+  .login-pitch { min-height: 48svh; padding: 24px; border-right: 0; }
+  .login-brand .brand-mark { width: 44px; height: 44px; }
+  .login-brand strong { font-size: 19px; }
+  .login-copy { margin: auto 0 18px; }
+  .matchday-label { margin-bottom: 14px; padding: 7px 9px; }
+  .login-copy h1 { max-width: 560px; margin-bottom: 16px; font-size: clamp(54px, 15vw, 88px); }
+  .login-copy > p:last-child { max-width: 420px; font-size: 14px; }
+  .tunnel-status { display: none; }
+  .login-panel { min-height: 52svh; padding: 32px 18px 44px; background: var(--login-night); backdrop-filter: none; }
+  .login-form { transform: none; }
+  .pass-body { padding: 28px 24px 25px; }
+  .login-form h2 { font-size: 40px; }
+  .pass-details, .pass-header, .pass-footer { padding-inline: 18px; }
   .topbar { position: static; min-height: auto; padding: 16px 18px 0; display: flex; flex-wrap: wrap; justify-content: space-between; }
   .topbar .brand small { display: none; }
   .topbar nav { width: calc(100% + 36px); height: 50px; order: 3; margin: 14px -18px 0; overflow-x: auto; justify-content: flex-start; border-top: 1px solid var(--line); }
@@ -263,9 +305,11 @@ input::placeholder { color: #647b8c; }
   .hero-meta > span { flex: 0 0 auto; }
   .hero-fixture { grid-template-columns: 1fr; gap: 12px; text-align: center; }
   .hero-fixture > div, .hero-fixture > div:last-child { flex-direction: column; text-align: center; }
+  .hero-team-name, .team-name { align-items: center; text-align: center; }
   .hero-fixture .team-crest, .hero-fixture .crest-fallback { width: 58px; height: 58px; }
   .hero-fixture strong { font-size: 30px; }
   .versus { justify-self: center; }
+  .hero-nav { justify-content: center; }
   .hero-board { overflow-x: auto; }
   .stat { min-width: 140px; padding: 18px; }
   .stat strong { font-size: 22px; }

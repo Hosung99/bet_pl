@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: match-pot
+    name: bet-pl
     runtime: node
     plan: free
     region: singapore
