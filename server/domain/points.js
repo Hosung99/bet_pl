@@ -32,9 +32,9 @@ export async function grantWeeklyPoints(client, userId, now = new Date()) {
 
 export async function createUser(client, { username, passwordHash, role = 'MEMBER' }) {
   const result = await client.query(
-    `INSERT INTO users (username, password_hash, role, balance)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id, username, role, active, balance, created_at`,
+    `INSERT INTO users (username, nickname, password_hash, role, balance)
+     VALUES ($1, LEFT($1, 20), $2, $3, $4)
+     RETURNING id, username, nickname, role, active, balance, created_at`,
     [username, passwordHash, role, WEEKLY_GRANT],
   )
   const user = result.rows[0]

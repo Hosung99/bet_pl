@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api.js";
+import { calculateOdds } from "./odds.js";
 
 const PICKS = [
   ["HOME", "홈승"],
@@ -310,8 +311,16 @@ function Hero({
   );
 }
 
-function OddsButton({ pick, label, selected, pool, total, disabled, onClick }) {
-  const odds = Number(pool) > 0 ? (total / Number(pool)).toFixed(2) : "—";
+function OddsButton({
+  label,
+  selected,
+  pool,
+  bettors,
+  totalBettors,
+  disabled,
+  onClick,
+}) {
+  const odds = calculateOdds(bettors, totalBettors).toFixed(2);
   return (
     <button
       type="button"
@@ -321,7 +330,9 @@ function OddsButton({ pick, label, selected, pool, total, disabled, onClick }) {
     >
       <span>{label}</span>
       <strong>{odds}</strong>
-      <small>{formatPoint(pool)}</small>
+      <small>
+        {bettors}명 · {formatPoint(pool)}
+      </small>
     </button>
   );
 }
@@ -342,11 +353,15 @@ function MatchCard({ match, onSaved, notify }) {
     DRAW: match.draw_pool,
     AWAY: match.away_pool,
   };
-  const total =
-    Number(match.home_pool) +
-    Number(match.draw_pool) +
-    Number(match.away_pool) +
-    Number(match.carryover);
+  const bettorCounts = {
+    HOME: Number(match.home_bettors),
+    DRAW: Number(match.draw_bettors),
+    AWAY: Number(match.away_bettors),
+  };
+  const totalBettors = Object.values(bettorCounts).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
 
   async function save() {
     if (!pick)
@@ -441,10 +456,10 @@ function MatchCard({ match, onSaved, notify }) {
         {PICKS.map(([key, label]) => (
           <OddsButton
             key={key}
-            pick={key}
             label={label}
             pool={pools[key]}
-            total={total}
+            bettors={bettorCounts[key]}
+            totalBettors={totalBettors}
             selected={pick === key}
             disabled={locked}
             onClick={() => setPick(key)}
@@ -698,13 +713,6 @@ function Empty({ title, body }) {
 }
 
 function BetHistory({ bets, onEdit }) {
-  if (!bets.length)
-    return (
-      <Empty
-        title="아직 베팅이 없습니다."
-        body="경기 보드에서 첫 예측을 남겨보세요."
-      />
-    );
   return (
     <section>
       <div className="section-head">
@@ -713,57 +721,138 @@ function BetHistory({ bets, onEdit }) {
           <h2>베팅 내역</h2>
         </div>
       </div>
-      <div className="ticket-list">
-        {bets.map((bet) => {
-          const editable =
-            bet.status === "PENDING" && new Date(bet.utc_date) > new Date();
-          return (
-            <button
-              type="button"
-              className={`ticket-row ${editable ? "ticket-editable" : ""}`}
-              key={bet.id}
-              disabled={!editable}
-              onClick={() => onEdit(bet.match_id)}
-            >
-              <div className="ticket-teams">
-                <TeamCrest
-                  src={bet.home_team_crest}
-                  name={bet.home_team_name}
-                />
-                <span>
-                  {bet.home_team_name}
-                  <small>{dateTime.format(new Date(bet.utc_date))}</small>
-                </span>
-                <b>
-                  {bet.status === "PENDING"
-                    ? "VS"
-                    : `${bet.home_score} : ${bet.away_score}`}
-                </b>
-                <span>{bet.away_team_name}</span>
-                <TeamCrest
-                  src={bet.away_team_crest}
-                  name={bet.away_team_name}
-                />
-              </div>
-              <div className="ticket-result">
-                <span>
-                  {pickLabel(bet.prediction)} · {formatPoint(bet.stake)}
-                </span>
-                <strong className={`result-${bet.status.toLowerCase()}`}>
-                  {bet.status === "WON"
-                    ? `+${formatPoint(bet.payout)}`
-                    : bet.status === "LOST"
-                      ? "미적중"
-                      : editable
-                        ? "진행 중 · 수정 →"
-                        : "마감"}
-                </strong>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      {!bets.length ? (
+        <Empty
+          title="아직 베팅이 없습니다."
+          body="경기 보드에서 첫 예측을 남겨보세요."
+        />
+      ) : (
+        <div className="ticket-list">
+          {bets.map((bet) => {
+            const editable =
+              bet.status === "PENDING" && new Date(bet.utc_date) > new Date();
+            return (
+              <button
+                type="button"
+                className={`ticket-row ${editable ? "ticket-editable" : ""}`}
+                key={bet.id}
+                disabled={!editable}
+                onClick={() => onEdit(bet.match_id)}
+              >
+                <div className="ticket-teams">
+                  <TeamCrest
+                    src={bet.home_team_crest}
+                    name={bet.home_team_name}
+                  />
+                  <span>
+                    {bet.home_team_name}
+                    <small>{dateTime.format(new Date(bet.utc_date))}</small>
+                  </span>
+                  <b>
+                    {bet.status === "PENDING"
+                      ? "VS"
+                      : `${bet.home_score} : ${bet.away_score}`}
+                  </b>
+                  <span>{bet.away_team_name}</span>
+                  <TeamCrest
+                    src={bet.away_team_crest}
+                    name={bet.away_team_name}
+                  />
+                </div>
+                <div className="ticket-result">
+                  <span>
+                    {pickLabel(bet.prediction)} · {formatPoint(bet.stake)}
+                  </span>
+                  <strong className={`result-${bet.status.toLowerCase()}`}>
+                    {bet.status === "WON"
+                      ? `적중 · +${formatPoint(bet.payout)}`
+                      : bet.status === "LOST"
+                        ? "미적중"
+                        : editable
+                          ? "진행 중 · 수정 →"
+                          : "마감"}
+                  </strong>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </section>
+  );
+}
+
+function MyPage({ user, bets, onUserChange, onEdit, notify }) {
+  const [nickname, setNickname] = useState(user.nickname || user.username);
+  const [saving, setSaving] = useState(false);
+  const wins = bets.filter((bet) => bet.status === "WON").length;
+  const losses = bets.filter((bet) => bet.status === "LOST").length;
+  const settled = wins + losses;
+  const winRate = settled ? `${((wins / settled) * 100).toFixed(1)}%` : "—";
+
+  useEffect(() => setNickname(user.nickname || user.username), [user]);
+
+  async function saveNickname(event) {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const result = await api("/api/me/nickname", {
+        method: "PATCH",
+        body: JSON.stringify({ nickname }),
+      });
+      onUserChange(result.user);
+      notify("닉네임을 변경했습니다.");
+    } catch (error) {
+      notify(error.message, "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <section>
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">PLAYER PROFILE</p>
+            <h2>마이페이지</h2>
+          </div>
+        </div>
+        <div className="profile-card">
+          <div className="profile-identity">
+            <span className="profile-avatar" aria-hidden="true">
+              {teamInitial(user.nickname || user.username)}
+            </span>
+            <div className="profile-name">
+              <strong>{user.nickname || user.username}</strong>
+              <small>@{user.username}</small>
+            </div>
+            <form className="nickname-form" onSubmit={saveNickname}>
+              <label>
+                <span className="sr-only">새 닉네임</span>
+                <input
+                  minLength="2"
+                  maxLength="20"
+                  value={nickname}
+                  onChange={(event) => setNickname(event.target.value)}
+                  required
+                />
+              </label>
+              <button className="small-button" disabled={saving}>
+                {saving ? "변경 중…" : "닉네임 변경"}
+              </button>
+            </form>
+          </div>
+          <div className="profile-stats">
+            <Stat label="전체 베팅" value={`${bets.length}경기`} />
+            <Stat label="적중" value={`${wins}경기`} accent />
+            <Stat label="미적중" value={`${losses}경기`} />
+            <Stat label="승률" value={winRate} />
+          </div>
+        </div>
+      </section>
+      <BetHistory bets={bets} onEdit={onEdit} />
+    </>
   );
 }
 
@@ -793,8 +882,10 @@ function Leaderboard({ users, currentUser }) {
               {String(index + 1).padStart(2, "0")}
             </strong>
             <span className="player">
-              <i>{entry.username.slice(0, 2).toUpperCase()}</i>
-              <b>{entry.username}</b>
+              <i>
+                {(entry.nickname || entry.username).slice(0, 2).toUpperCase()}
+              </i>
+              <b>{entry.nickname || entry.username}</b>
               {Number(entry.id) === Number(currentUser.id) && (
                 <small>YOU</small>
               )}
@@ -1188,7 +1279,7 @@ export default function App() {
   const navItems = useMemo(
     () => [
       ["dashboard", "경기 보드"],
-      ["bets", "내 베팅"],
+      ["bets", "마이페이지"],
       ["leaderboard", "순위표"],
       ...(user?.role === "ADMIN" ? [["admin", "운영 센터"]] : []),
     ],
@@ -1229,7 +1320,7 @@ export default function App() {
         <div className="account">
           <span>
             <small>{user.role === "ADMIN" ? "ADMIN" : "PLAYER"}</small>
-            <strong>{user.username}</strong>
+            <strong>{user.nickname || user.username}</strong>
           </span>
           <b>{formatPoint(user.balance)}</b>
           <button
@@ -1264,8 +1355,11 @@ export default function App() {
           />
         )}
         {tab === "bets" && (
-          <BetHistory
+          <MyPage
+            user={user}
             bets={bets}
+            onUserChange={setUser}
+            notify={notify}
             onEdit={(matchId) => {
               setFocusedMatchId(matchId);
               setTab("dashboard");

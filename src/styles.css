@@ -221,6 +221,19 @@ input::placeholder { color: #647b8c; }
 .empty h3 { margin: 25px 0 8px; color: var(--paper); }
 .empty p { margin: 0; font-size: 13px; }
 
+.profile-card { margin-bottom: 62px; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(460px, 1fr); overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-top: 5px solid var(--blue); border-radius: 8px; box-shadow: var(--shadow); }
+.profile-identity { min-width: 0; padding: 30px; display: flex; align-items: center; gap: 18px; }
+.profile-avatar { width: 64px; height: 64px; flex: 0 0 auto; display: grid; place-items: center; color: var(--night); background: var(--lime); border-radius: 50%; font: 950 21px/1 "Arial Narrow", Impact, sans-serif; }
+.profile-name { min-width: 110px; }
+.profile-name strong { display: block; font: 900 25px/1 "Arial Narrow", Impact, sans-serif; }
+.profile-name small { display: block; margin-top: 7px; color: var(--muted); font: 700 9px/1 ui-monospace, monospace; }
+.nickname-form { min-width: 240px; margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.nickname-form label { flex: 1; }
+.profile-stats { display: grid; grid-template-columns: repeat(4, 1fr); background: #111b3b; border-left: 1px dashed var(--line); }
+.profile-stats .stat { min-width: 0; padding: 20px 14px; border-right: 1px solid var(--line); border-bottom: 0; }
+.profile-stats .stat:last-child { border-right: 0; }
+.profile-stats .stat strong { font-size: clamp(20px, 2vw, 27px); }
+
 .ticket-list { display: grid; gap: 10px; }
 .ticket-row { width: 100%; display: grid; grid-template-columns: 1fr 220px; align-items: center; min-height: 92px; padding: 18px 22px; color: var(--ink); background: var(--ticket); border: 0; border-left: 5px solid var(--coral); border-radius: 5px; box-shadow: 0 8px 24px rgb(3 9 30 / 15%); text-align: left; }
 .ticket-row:disabled { cursor: default; opacity: 1; }
@@ -309,6 +322,8 @@ input::placeholder { color: #647b8c; }
   .hero { grid-template-columns: 1fr; }
   .hero-board { grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-left: 0; }
   .stat { border-right: 1px solid var(--line); border-bottom: 0; }
+  .profile-card { grid-template-columns: 1fr; }
+  .profile-stats { border-top: 1px dashed var(--line); border-left: 0; }
   .match-grid { grid-template-columns: 1fr; }
   .create-user { grid-template-columns: 1fr 1fr; }
   .admin-user-row { grid-template-columns: 1fr 110px 130px auto; padding: 10px 0; }
@@ -355,6 +370,12 @@ input::placeholder { color: #647b8c; }
   .section-head { align-items: center; }
   .section-head h2 { font-size: 40px; }
   .section-note { display: none; }
+  .profile-card { margin-bottom: 44px; }
+  .profile-identity { padding: 22px 18px; flex-wrap: wrap; }
+  .nickname-form { min-width: 100%; margin-left: 0; }
+  .profile-stats { grid-template-columns: repeat(2, 1fr); }
+  .profile-stats .stat:nth-child(2) { border-right: 0; }
+  .profile-stats .stat:nth-child(-n + 2) { border-bottom: 1px solid var(--line); }
   .match-teams { padding-inline: 14px; }
   .team { flex-direction: column; text-align: center; }
   .away-team { flex-direction: column; text-align: center; }

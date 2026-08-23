@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs'
 import { pool, transaction } from './db.js'
 import { authenticate, requireAdmin, requireAuth, sessionCookie, startSession, verifyPassword } from './auth.js'
 import { createUser, grantWeeklyPoints } from './domain/points.js'
+import { normalizeNickname } from './domain/profile.js'
 import { ensureMatchesFresh, syncMatches } from './football.js'
 import { reverseSettlement, settleMatch } from './settlement.js'
 
@@ -55,6 +56,7 @@ function cleanUser(user) {
   return {
     id: user.id,
     username: user.username,
+    nickname: user.nickname || user.username,
     role: user.role,
     active: user.active,
     balance: Number(user.balance),
@@ -126,6 +128,17 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
   res.json({ user: cleanUser(req.user) })
 })
 
+app.patch('/api/me/nickname', requireAuth, async (req, res) => {
+  const nickname = normalizeNickname(req.body?.nickname)
+  if (!nickname) return res.status(400).json({ error: '닉네임은 2~20자로 입력하세요.' })
+  const result = await pool.query(
+    `UPDATE users SET nickname = $1 WHERE id = $2
+     RETURNING id, username, nickname, role, active, balance, created_at`,
+    [nickname, req.user.id],
+  )
+  res.json({ user: cleanUser(result.rows[0]) })
+})
+
 app.get('/api/matches', requireAuth, async (req, res) => {
   let syncWarning = null
   try {
@@ -139,14 +152,17 @@ app.get('/api/matches', requireAuth, async (req, res) => {
        COALESCE(SUM(b.stake) FILTER (WHERE b.status <> 'CANCELLED' AND b.prediction = 'HOME'), 0) AS home_pool,
        COALESCE(SUM(b.stake) FILTER (WHERE b.status <> 'CANCELLED' AND b.prediction = 'DRAW'), 0) AS draw_pool,
        COALESCE(SUM(b.stake) FILTER (WHERE b.status <> 'CANCELLED' AND b.prediction = 'AWAY'), 0) AS away_pool,
+       COUNT(b.id) FILTER (WHERE b.status <> 'CANCELLED' AND b.prediction = 'HOME')::int AS home_bettors,
+       COUNT(b.id) FILTER (WHERE b.status <> 'CANCELLED' AND b.prediction = 'DRAW')::int AS draw_bettors,
+       COUNT(b.id) FILTER (WHERE b.status <> 'CANCELLED' AND b.prediction = 'AWAY')::int AS away_bettors,
        mine.prediction AS my_prediction, mine.stake AS my_stake,
        mine.status AS my_bet_status, mine.payout AS my_payout,
        ARRAY(
-         SELECT u.username
+         SELECT u.nickname
          FROM bets participant
          JOIN users u ON u.id = participant.user_id
          WHERE participant.match_id = m.id AND participant.status <> 'CANCELLED'
-         ORDER BY u.username
+         ORDER BY u.nickname
        ) AS bettors
      FROM matches m
      LEFT JOIN bets b ON b.match_id = m.id
@@ -262,7 +278,7 @@ app.get('/api/bets', requireAuth, async (req, res) => {
 
 app.get('/api/leaderboard', requireAuth, async (_req, res) => {
   const result = await pool.query(
-    `SELECT u.id, u.username, u.balance,
+    `SELECT u.id, u.username, u.nickname, u.balance,
        COUNT(b.id) FILTER (WHERE b.status IN ('WON', 'LOST'))::int AS settled_bets,
        COUNT(b.id) FILTER (WHERE b.status = 'WON')::int AS wins
      FROM users u LEFT JOIN bets b ON b.user_id = u.id
@@ -276,7 +292,7 @@ app.get('/api/leaderboard', requireAuth, async (_req, res) => {
 
 app.get('/api/admin/users', requireAdmin, async (_req, res) => {
   const result = await pool.query(
-    `SELECT id, username, role, active, balance, created_at
+    `SELECT id, username, nickname, role, active, balance, created_at
      FROM users ORDER BY created_at DESC`,
   )
   res.json({ users: result.rows })
@@ -305,7 +321,7 @@ app.patch('/api/admin/users/:userId', requireAdmin, async (req, res) => {
   if (typeof req.body?.active !== 'boolean') return res.status(400).json({ error: '활성 상태를 확인하세요.' })
   const result = await pool.query(
     `UPDATE users SET active = $1 WHERE id = $2
-     RETURNING id, username, role, active, balance, created_at`,
+     RETURNING id, username, nickname, role, active, balance, created_at`,
     [req.body.active, userId],
   )
   if (!result.rowCount) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' })
@@ -322,7 +338,7 @@ app.post('/api/admin/users/:userId/points', requireAdmin, async (req, res) => {
   const user = await transaction(async (client) => {
     const result = await client.query(
       `UPDATE users SET balance = balance + $1 WHERE id = $2
-       RETURNING id, username, role, active, balance, created_at`,
+       RETURNING id, username, nickname, role, active, balance, created_at`,
       [amount, userId],
     )
     if (!result.rowCount) throw Object.assign(new Error('사용자를 찾을 수 없습니다.'), { status: 404 })

@@ -1,12 +1,17 @@
 CREATE TABLE IF NOT EXISTS users (
   id BIGSERIAL PRIMARY KEY,
   username VARCHAR(40) NOT NULL,
+  nickname VARCHAR(20),
   password_hash TEXT NOT NULL,
   role VARCHAR(10) NOT NULL DEFAULT 'MEMBER' CHECK (role IN ('ADMIN', 'MEMBER')),
   active BOOLEAN NOT NULL DEFAULT TRUE,
   balance BIGINT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname VARCHAR(20);
+UPDATE users SET nickname = LEFT(username, 20) WHERE nickname IS NULL;
+ALTER TABLE users ALTER COLUMN nickname SET NOT NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx ON users (LOWER(username));
 
