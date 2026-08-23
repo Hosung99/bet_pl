@@ -64,14 +64,14 @@ export async function authenticate(req, _res, next) {
   }
 }
 
-export function requireAuth(req, _res, next) {
-  if (!req.user) return next(Object.assign(new Error('로그인이 필요합니다.'), { status: 401 }))
+export function requireAuth(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' })
   next()
 }
 
-export function requireAdmin(req, _res, next) {
-  if (!req.user) return next(Object.assign(new Error('로그인이 필요합니다.'), { status: 401 }))
-  if (req.user.role !== 'ADMIN') return next(Object.assign(new Error('관리자 권한이 필요합니다.'), { status: 403 }))
+export function requireAdmin(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' })
+  if (req.user.role !== 'ADMIN') return res.status(403).json({ error: '관리자 권한이 필요합니다.' })
   next()
 }
 
