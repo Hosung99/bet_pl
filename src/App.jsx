@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api.js";
 
 const PICKS = [
@@ -6,6 +6,7 @@ const PICKS = [
   ["DRAW", "무승부"],
   ["AWAY", "원정승"],
 ];
+const MATCH_PAGE_SIZE = 8;
 
 const point = new Intl.NumberFormat("ko-KR");
 const dateTime = new Intl.DateTimeFormat("ko-KR", {
@@ -494,10 +495,21 @@ function Dashboard({
 }) {
   const [showFinished, setShowFinished] = useState(false);
   const [heroMatchId, setHeroMatchId] = useState(null);
+  const [visibleCount, setVisibleCount] = useState(MATCH_PAGE_SIZE);
+  const loadMoreRef = useRef(null);
+
+  useEffect(() => setVisibleCount(MATCH_PAGE_SIZE), [showFinished]);
 
   useEffect(() => {
     if (!focusedMatchId) return;
     setShowFinished(false);
+    const targetIndex = matches
+      .filter((match) => match.status !== "FINISHED")
+      .findIndex((match) => Number(match.id) === Number(focusedMatchId));
+    if (targetIndex >= visibleCount) {
+      setVisibleCount(targetIndex + 1);
+      return;
+    }
     const frame = window.requestAnimationFrame(() => {
       const card = document.getElementById(`match-${focusedMatchId}`);
       if (!card) return;
@@ -511,11 +523,34 @@ function Dashboard({
       onFocusHandled(null);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [focusedMatchId, matches, onFocusHandled]);
+  }, [focusedMatchId, matches, onFocusHandled, visibleCount]);
 
-  const visible = matches.filter((match) =>
+  const filtered = matches.filter((match) =>
     showFinished ? match.status === "FINISHED" : match.status !== "FINISHED",
   );
+  const visible = filtered.slice(0, visibleCount);
+  const hasMore = visible.length < filtered.length;
+
+  useEffect(() => {
+    if (
+      !hasMore ||
+      !loadMoreRef.current ||
+      !("IntersectionObserver" in window)
+    )
+      return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting)
+          setVisibleCount((count) =>
+            Math.min(count + MATCH_PAGE_SIZE, filtered.length),
+          );
+      },
+      { rootMargin: "300px" },
+    );
+    observer.observe(loadMoreRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, filtered.length]);
+
   const groups = visible.reduce((result, match) => {
     const day = dayLabel.format(new Date(match.utc_date));
     if (!result[day]) result[day] = [];
@@ -591,6 +626,23 @@ function Dashboard({
           </div>
         </section>
       ))}
+      {hasMore && (
+        <button
+          ref={loadMoreRef}
+          className="load-more"
+          type="button"
+          onClick={() =>
+            setVisibleCount((count) =>
+              Math.min(count + MATCH_PAGE_SIZE, filtered.length),
+            )
+          }
+        >
+          다음 경기 더 보기
+          <small>
+            {visible.length} / {filtered.length}
+          </small>
+        </button>
+      )}
     </>
   );
 }

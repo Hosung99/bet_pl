@@ -163,6 +163,9 @@ input::placeholder { color: #647b8c; }
 .fixture-day > h3::after { content: ""; height: 1px; flex: 1; background: var(--line); }
 .fixture-day > h3 small { order: 2; color: #668195; font: 700 9px/1 ui-monospace, monospace; letter-spacing: .1em; }
 .match-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.load-more { width: 100%; min-height: 54px; display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--paper); background: #151f46; border: 1px solid var(--line); border-radius: 5px; font-size: 12px; font-weight: 800; }
+.load-more:hover { color: var(--night); background: var(--lime); border-color: var(--lime); }
+.load-more small { font: 700 9px/1 ui-monospace, monospace; letter-spacing: .1em; }
 .match-card { position: relative; color: var(--ink); background: var(--ticket); border: 0; border-top: 5px solid var(--lime); border-radius: 8px; box-shadow: 0 10px 34px rgb(3 9 30 / 18%); overflow: hidden; transition: box-shadow .2s ease, transform .2s ease; }
 .match-card::before, .match-card::after { content: ""; position: absolute; z-index: 2; top: 46px; width: 14px; height: 14px; background: var(--night); border-radius: 50%; pointer-events: none; }
 .match-card::before { left: -7px; }
