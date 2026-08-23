@@ -263,7 +263,7 @@ function Hero({
       <aside className="hero-board" aria-label="내 현황">
         <Stat label="MY WALLET" value={formatPoint(balance)} accent />
         <Stat label="ACTIVE BETS" value={`${activeBets}경기`} />
-        <Stat label="CURRENT POT" value={formatPoint(totalPool)} />
+        <Stat label="현재 베팅금액" value={formatPoint(totalPool)} />
       </aside>
     </section>
   );
@@ -343,8 +343,18 @@ function MatchCard({ match, onSaved, notify }) {
     }
   }
 
+  function adjustStake(step) {
+    const amount = Number(stake) || 0;
+    const aligned =
+      (step > 0 ? Math.floor(amount / 100) : Math.ceil(amount / 100)) * 100;
+    setStake(String(Math.max(100, aligned + step)));
+  }
+
   return (
-    <article className={`match-card ${locked ? "match-locked" : ""}`}>
+    <article
+      id={`match-${match.id}`}
+      className={`match-card ${locked ? "match-locked" : ""}`}
+    >
       <header className="match-card-head">
         <span className="kickoff-time">{timeLabel.format(kickoff)}</span>
         <span className={`status status-${match.status.toLowerCase()}`}>
@@ -402,18 +412,34 @@ function MatchCard({ match, onSaved, notify }) {
       </div>
       {!locked && (
         <div className="bet-controls">
-          <label>
-            <span className="sr-only">베팅 포인트</span>
+          <div className="stake-stepper">
+            <button
+              type="button"
+              aria-label="베팅 포인트 100 감소"
+              disabled={saving || !stake || Number(stake) <= 100}
+              onClick={() => adjustStake(-100)}
+            >
+              −
+            </button>
             <input
               type="number"
               inputMode="numeric"
+              aria-label="베팅 포인트"
               min="100"
               step="100"
-              placeholder="베팅 포인트 (100P 단위)"
+              placeholder="100P 단위"
               value={stake}
               onChange={(event) => setStake(event.target.value)}
             />
-          </label>
+            <button
+              type="button"
+              aria-label="베팅 포인트 100 증가"
+              disabled={saving || Number(stake) >= 1_000_000_000}
+              onClick={() => adjustStake(100)}
+            >
+              +
+            </button>
+          </div>
           <button
             className="primary-button"
             type="button"
@@ -458,9 +484,35 @@ function MatchCard({ match, onSaved, notify }) {
   );
 }
 
-function Dashboard({ matches, user, onSaved, notify }) {
+function Dashboard({
+  matches,
+  user,
+  onSaved,
+  notify,
+  focusedMatchId,
+  onFocusHandled,
+}) {
   const [showFinished, setShowFinished] = useState(false);
   const [heroMatchId, setHeroMatchId] = useState(null);
+
+  useEffect(() => {
+    if (!focusedMatchId) return;
+    setShowFinished(false);
+    const frame = window.requestAnimationFrame(() => {
+      const card = document.getElementById(`match-${focusedMatchId}`);
+      if (!card) return;
+      card.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "center",
+      });
+      card.querySelector("input")?.focus({ preventScroll: true });
+      onFocusHandled(null);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusedMatchId, matches, onFocusHandled]);
+
   const visible = matches.filter((match) =>
     showFinished ? match.status === "FINISHED" : match.status !== "FINISHED",
   );
@@ -553,7 +605,7 @@ function Empty({ title, body }) {
   );
 }
 
-function BetHistory({ bets }) {
+function BetHistory({ bets, onEdit }) {
   if (!bets.length)
     return (
       <Empty
@@ -570,36 +622,54 @@ function BetHistory({ bets }) {
         </div>
       </div>
       <div className="ticket-list">
-        {bets.map((bet) => (
-          <article className="ticket-row" key={bet.id}>
-            <div className="ticket-teams">
-              <TeamCrest src={bet.home_team_crest} name={bet.home_team_name} />
-              <span>
-                {bet.home_team_name}
-                <small>{dateTime.format(new Date(bet.utc_date))}</small>
-              </span>
-              <b>
-                {bet.status === "PENDING"
-                  ? "VS"
-                  : `${bet.home_score} : ${bet.away_score}`}
-              </b>
-              <span>{bet.away_team_name}</span>
-              <TeamCrest src={bet.away_team_crest} name={bet.away_team_name} />
-            </div>
-            <div className="ticket-result">
-              <span>
-                {pickLabel(bet.prediction)} · {formatPoint(bet.stake)}
-              </span>
-              <strong className={`result-${bet.status.toLowerCase()}`}>
-                {bet.status === "WON"
-                  ? `+${formatPoint(bet.payout)}`
-                  : bet.status === "LOST"
-                    ? "미적중"
-                    : "진행 중"}
-              </strong>
-            </div>
-          </article>
-        ))}
+        {bets.map((bet) => {
+          const editable =
+            bet.status === "PENDING" && new Date(bet.utc_date) > new Date();
+          return (
+            <button
+              type="button"
+              className={`ticket-row ${editable ? "ticket-editable" : ""}`}
+              key={bet.id}
+              disabled={!editable}
+              onClick={() => onEdit(bet.match_id)}
+            >
+              <div className="ticket-teams">
+                <TeamCrest
+                  src={bet.home_team_crest}
+                  name={bet.home_team_name}
+                />
+                <span>
+                  {bet.home_team_name}
+                  <small>{dateTime.format(new Date(bet.utc_date))}</small>
+                </span>
+                <b>
+                  {bet.status === "PENDING"
+                    ? "VS"
+                    : `${bet.home_score} : ${bet.away_score}`}
+                </b>
+                <span>{bet.away_team_name}</span>
+                <TeamCrest
+                  src={bet.away_team_crest}
+                  name={bet.away_team_name}
+                />
+              </div>
+              <div className="ticket-result">
+                <span>
+                  {pickLabel(bet.prediction)} · {formatPoint(bet.stake)}
+                </span>
+                <strong className={`result-${bet.status.toLowerCase()}`}>
+                  {bet.status === "WON"
+                    ? `+${formatPoint(bet.payout)}`
+                    : bet.status === "LOST"
+                      ? "미적중"
+                      : editable
+                        ? "진행 중 · 수정 →"
+                        : "마감"}
+                </strong>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </section>
   );
@@ -940,6 +1010,10 @@ export default function App() {
   const [adminUsers, setAdminUsers] = useState([]);
   const [syncWarning, setSyncWarning] = useState("");
   const [toast, setToast] = useState(null);
+  const [focusedMatchId, setFocusedMatchId] = useState(null);
+  const [darkMode, setDarkMode] = useState(
+    () => window.localStorage.getItem("bet-pl-theme") === "dark",
+  );
 
   const notify = useCallback((message, type = "success") => {
     setToast({ message, type });
@@ -980,6 +1054,10 @@ export default function App() {
       .catch(() => setUser(null))
       .finally(() => setAuthLoading(false));
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("bet-pl-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   useEffect(() => {
     const expire = () => {
@@ -1033,7 +1111,7 @@ export default function App() {
   if (!user) return <Login onLogin={setUser} />;
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${darkMode ? "dark-mode" : ""}`}>
       <header className="topbar">
         <button
           className="brand brand-button"
@@ -1061,6 +1139,15 @@ export default function App() {
             <strong>{user.username}</strong>
           </span>
           <b>{formatPoint(user.balance)}</b>
+          <button
+            className="theme-toggle"
+            type="button"
+            aria-label={darkMode ? "기본 모드로 전환" : "다크 모드로 전환"}
+            aria-pressed={darkMode}
+            onClick={() => setDarkMode((current) => !current)}
+          >
+            <span aria-hidden="true">{darkMode ? "☀" : "☾"}</span>
+          </button>
           <button className="logout" onClick={logout} aria-label="로그아웃">
             ↗
           </button>
@@ -1079,9 +1166,19 @@ export default function App() {
             user={user}
             onSaved={onSaved}
             notify={notify}
+            focusedMatchId={focusedMatchId}
+            onFocusHandled={setFocusedMatchId}
           />
         )}
-        {tab === "bets" && <BetHistory bets={bets} />}
+        {tab === "bets" && (
+          <BetHistory
+            bets={bets}
+            onEdit={(matchId) => {
+              setFocusedMatchId(matchId);
+              setTab("dashboard");
+            }}
+          />
+        )}
         {tab === "leaderboard" && (
           <Leaderboard users={leaders} currentUser={user} />
         )}
