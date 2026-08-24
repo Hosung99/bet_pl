@@ -2,14 +2,67 @@ import { pool, transaction } from './db.js'
 import { attachUnassignedCarryover, settleMatch } from './settlement.js'
 
 const API_URL = 'https://api.football-data.org/v4/competitions/PL/matches'
+const STANDINGS_API_URL = 'https://api.football-data.org/v4/competitions/PL/standings'
 const FRESH_FOR_MS = 30 * 60 * 1_000
 let syncInFlight
+let standingsCache
+let standingsInFlight
 
 function winnerFrom(match) {
   if (match.score?.winner === 'HOME_TEAM') return 'HOME'
   if (match.score?.winner === 'AWAY_TEAM') return 'AWAY'
   if (match.score?.winner === 'DRAW') return 'DRAW'
   return null
+}
+
+export function normalizeStandings(payload) {
+  const total = payload.standings?.find((standing) => standing.type === 'TOTAL')
+  return {
+    currentMatchday: Number(payload.season?.currentMatchday) || null,
+    table: (total?.table || []).map((row) => ({
+      position: Number(row.position),
+      team: {
+        id: row.team?.id,
+        name: row.team?.name,
+        shortName: row.team?.shortName,
+        tla: row.team?.tla,
+        crest: row.team?.crest,
+      },
+      playedGames: Number(row.playedGames),
+      won: Number(row.won),
+      draw: Number(row.draw),
+      lost: Number(row.lost),
+      goalsFor: Number(row.goalsFor),
+      goalsAgainst: Number(row.goalsAgainst),
+      goalDifference: Number(row.goalDifference),
+      points: Number(row.points),
+    })),
+  }
+}
+
+export async function getStandings() {
+  if (standingsCache && Date.now() - standingsCache.fetchedAt < FRESH_FOR_MS) {
+    return standingsCache.data
+  }
+  if (!process.env.FOOTBALL_DATA_TOKEN) {
+    throw Object.assign(new Error('FOOTBALL_DATA_TOKEN이 설정되지 않았습니다.'), { status: 503 })
+  }
+  if (!standingsInFlight) {
+    standingsInFlight = fetch(STANDINGS_API_URL, {
+      headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_TOKEN },
+      signal: AbortSignal.timeout(15_000),
+    }).then(async (response) => {
+      if (!response.ok) {
+        throw Object.assign(new Error(`순위 데이터 조회 실패 (${response.status})`), { status: 502 })
+      }
+      const data = normalizeStandings(await response.json())
+      standingsCache = { data, fetchedAt: Date.now() }
+      return data
+    }).finally(() => {
+      standingsInFlight = null
+    })
+  }
+  return standingsInFlight
 }
 
 export async function syncMatches() {

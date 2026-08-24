@@ -362,6 +362,7 @@ function MatchCard({ match, onSaved, notify }) {
     (sum, count) => sum + count,
     0,
   );
+  const bettors = match.bettors || [];
 
   async function save() {
     if (!pick)
@@ -533,15 +534,25 @@ function MatchCard({ match, onSaved, notify }) {
         </footer>
       )}
       <footer className="bettors">
-        <span>BETTORS</span>
-        <strong>
-          {match.bettors
-            ?.map(
-              (bettor) =>
-                `${bettor.nickname} · ${formatPoint(bettor.stake)}`,
-            )
-            .join(", ") || "아직 없음"}
-        </strong>
+        <span className="bettors-label">
+          BETTORS <b>{bettors.length}</b>
+        </span>
+        {bettors.length ? (
+          <ul className="bettor-list" aria-label="베팅 참여자와 베팅금액">
+            {bettors.map((bettor, index) => (
+              <li
+                className="bettor-chip"
+                key={`${bettor.nickname}-${index}`}
+                aria-label={`${bettor.nickname}, ${formatPoint(bettor.stake)} 베팅`}
+              >
+                <span>{bettor.nickname}</span>
+                <strong>{point.format(Number(bettor.stake))}</strong>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <em className="bettors-empty">첫 베팅을 기다리는 중</em>
+        )}
       </footer>
     </article>
   );
@@ -716,6 +727,66 @@ function Empty({ title, body }) {
       <h3>{title}</h3>
       <p>{body}</p>
     </div>
+  );
+}
+
+function PremierLeagueStandings({ standings }) {
+  return (
+    <section>
+      <div className="section-head">
+        <div>
+          <p className="eyebrow">PREMIER LEAGUE TABLE</p>
+          <h2>프리미어리그 순위</h2>
+        </div>
+        {standings?.currentMatchday && (
+          <p className="section-note">{standings.currentMatchday}라운드 기준</p>
+        )}
+      </div>
+      {!standings ? (
+        <Empty title="순위를 불러오는 중입니다." body="잠시만 기다려주세요." />
+      ) : (
+        <div className="pl-table-wrap">
+          <table className="pl-table">
+            <thead>
+              <tr>
+                <th scope="col">순위</th>
+                <th scope="col">클럽</th>
+                <th scope="col">경기</th>
+                <th scope="col">승</th>
+                <th scope="col">무</th>
+                <th scope="col">패</th>
+                <th scope="col">득실</th>
+                <th scope="col">승점</th>
+              </tr>
+            </thead>
+            <tbody>
+              {standings.table.map((row) => (
+                <tr key={row.team.id}>
+                  <td><b className="pl-position">{row.position}</b></td>
+                  <td>
+                    <span className="pl-team">
+                      <TeamCrest src={row.team.crest} name={row.team.shortName} />
+                      <span>
+                        <strong>{row.team.shortName || row.team.name}</strong>
+                        <small>{row.team.tla}</small>
+                      </span>
+                    </span>
+                  </td>
+                  <td>{row.playedGames}</td>
+                  <td>{row.won}</td>
+                  <td>{row.draw}</td>
+                  <td>{row.lost}</td>
+                  <td className={row.goalDifference > 0 ? "positive" : ""}>
+                    {row.goalDifference > 0 ? "+" : ""}{row.goalDifference}
+                  </td>
+                  <td><strong className="pl-points">{row.points}</strong></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -1197,6 +1268,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState("dashboard");
   const [matches, setMatches] = useState([]);
+  const [standings, setStandings] = useState(null);
   const [bets, setBets] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
@@ -1226,6 +1298,8 @@ export default function App() {
   const loadCurrentTab = useCallback(
     async (currentTab, currentUser) => {
       if (currentTab === "dashboard") await loadMatches();
+      if (currentTab === "standings")
+        setStandings(await api("/api/standings"));
       if (currentTab === "bets") setBets((await api("/api/bets")).bets);
       if (currentTab === "leaderboard")
         setLeaders((await api("/api/leaderboard")).users);
@@ -1287,6 +1361,7 @@ export default function App() {
   const navItems = useMemo(
     () => [
       ["dashboard", "경기 보드"],
+      ["standings", "PL 순위"],
       ["bets", "마이페이지"],
       ["leaderboard", "순위표"],
       ...(user?.role === "ADMIN" ? [["admin", "운영 센터"]] : []),
@@ -1361,6 +1436,9 @@ export default function App() {
             focusedMatchId={focusedMatchId}
             onFocusHandled={setFocusedMatchId}
           />
+        )}
+        {tab === "standings" && (
+          <PremierLeagueStandings standings={standings} />
         )}
         {tab === "bets" && (
           <MyPage

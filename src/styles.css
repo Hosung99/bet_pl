@@ -211,15 +211,38 @@ input::placeholder { color: #647b8c; }
 .my-ticket strong { color: var(--paper); }
 .my-ticket em { margin-left: auto; color: var(--lime); font-style: normal; font-weight: 900; }
 .my-ticket em.lost { color: var(--coral); }
-.bettors { min-height: 38px; padding: 9px 16px; display: flex; align-items: center; gap: 10px; color: #68738a; background: #f3ece2; border-top: 1px dashed #c8beb1; font-size: 10px; }
-.bettors span { flex: 0 0 auto; font: 800 9px/1 ui-monospace, monospace; letter-spacing: .12em; }
-.bettors strong { overflow-wrap: anywhere; color: var(--ink); }
+.bettors { min-height: 52px; padding: 10px 16px 12px; display: flex; align-items: flex-start; gap: 12px; color: #68738a; background: #f3ece2; border-top: 1px dashed #c8beb1; }
+.bettors-label { flex: 0 0 auto; margin-top: 5px; display: flex; align-items: center; gap: 6px; font: 800 9px/1 ui-monospace, monospace; letter-spacing: .12em; }
+.bettors-label b { width: 18px; height: 18px; display: grid; place-items: center; color: white; background: var(--coral); font: 900 9px/1 ui-monospace, monospace; letter-spacing: 0; transform: rotate(-2deg); }
+.bettor-list { min-width: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; list-style: none; }
+.bettor-chip { min-height: 28px; display: inline-flex; align-items: stretch; overflow: hidden; color: var(--ink); background: #fffaf2; border: 1px solid #c8beb1; border-radius: 3px; box-shadow: 0 2px 0 rgb(20 32 74 / 10%); }
+.bettor-chip > span { max-width: 150px; padding: 7px 8px 6px; overflow: hidden; font-size: 10px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+.bettor-chip > strong { padding: 7px 8px 6px; color: var(--lime); background: var(--ink); border-left: 1px dashed #7d87a3; font: 900 10px/1 ui-monospace, monospace; }
+.bettors-empty { margin-top: 4px; color: #7c8497; font-size: 10px; font-style: normal; }
 .match-locked:hover { transform: none; }
 
 .empty { min-height: 330px; display: grid; place-content: center; text-align: center; border: 1px dashed var(--line); color: var(--muted); }
 .empty span { color: #1b3449; font: 900 90px/.8 "Arial Narrow", Impact, sans-serif; }
 .empty h3 { margin: 25px 0 8px; color: var(--paper); }
 .empty p { margin: 0; font-size: 13px; }
+
+.pl-table-wrap { overflow-x: auto; background: var(--ticket); border-top: 5px solid var(--blue); border-radius: 8px; box-shadow: var(--shadow); }
+.pl-table { width: 100%; min-width: 760px; border-collapse: collapse; color: var(--ink); font-variant-numeric: tabular-nums; }
+.pl-table th { height: 44px; padding: 0 14px; color: #69738a; background: #e5ddd1; border-bottom: 1px dashed #b8aea1; font: 800 9px/1 ui-monospace, monospace; letter-spacing: .1em; text-align: center; }
+.pl-table th:nth-child(2) { text-align: left; }
+.pl-table td { height: 62px; padding: 8px 14px; border-bottom: 1px solid #d7cec1; font: 750 12px/1 ui-monospace, monospace; text-align: center; }
+.pl-table tbody tr:last-child td { border-bottom: 0; }
+.pl-table tbody tr:hover { background: #fffaf2; }
+.pl-table td:nth-child(2) { width: 100%; text-align: left; }
+.pl-position { width: 30px; height: 30px; display: inline-grid; place-items: center; color: var(--ink); background: #ddd4c7; font-size: 13px; }
+.pl-table tbody tr:first-child .pl-position { color: var(--night); background: var(--lime); }
+.pl-team { display: flex; align-items: center; gap: 12px; }
+.pl-team .team-crest, .pl-team .crest-fallback { width: 34px; height: 34px; flex: 0 0 auto; }
+.pl-team > span { min-width: 0; }
+.pl-team strong { display: block; overflow: hidden; font: 850 13px/1.2 Inter, Pretendard, sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.pl-team small { display: block; margin-top: 4px; color: #7a8499; font-size: 8px; letter-spacing: .12em; }
+.pl-table .positive { color: #14805b; }
+.pl-points { color: var(--ink); font-size: 16px; }
 
 .profile-card { margin-bottom: 62px; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(460px, 1fr); overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-top: 5px solid var(--blue); border-radius: 8px; box-shadow: var(--shadow); }
 .profile-identity { min-width: 0; padding: 30px; display: flex; align-items: center; gap: 18px; }
@@ -286,6 +309,15 @@ input::placeholder { color: #647b8c; }
 
 .dark-mode { background-color: #091126; }
 .dark-mode .hero, .dark-mode .match-card, .dark-mode .ticket-row { color: #eef3f7; background: #18244d; }
+.dark-mode .pl-table-wrap { background: #18244d; }
+.dark-mode .pl-table { color: #eef3f7; }
+.dark-mode .pl-table th { color: #a7b4ce; background: #111b3b; border-color: #52618a; }
+.dark-mode .pl-table td { border-color: #394a78; }
+.dark-mode .pl-table tbody tr:hover { background: #1f2e5c; }
+.dark-mode .pl-position { color: #dce5f2; background: #2a3a68; }
+.dark-mode .pl-team small { color: #96a5c2; }
+.dark-mode .pl-table .positive { color: var(--blue); }
+.dark-mode .pl-points { color: var(--lime); }
 .dark-mode .hero-main { background-image: linear-gradient(90deg, rgb(255 255 255 / 4%) 1px, transparent 1px); }
 .dark-mode .hero-main::after { border-color: rgb(89 208 196 / 16%); box-shadow: 0 0 0 80px rgb(89 208 196 / 4%), 0 0 0 160px rgb(89 208 196 / 2%); }
 .dark-mode .hero-meta > span { color: var(--night); background: var(--lime); }
@@ -304,7 +336,9 @@ input::placeholder { color: #647b8c; }
 .dark-mode .stake-stepper button:last-child { color: var(--night); background: var(--lime); }
 .dark-mode .stake-stepper input { color: var(--paper); border-color: #52628e; }
 .dark-mode .bettors { color: #9eacc9; background: #111b3b; border-color: #52618a; }
-.dark-mode .bettors strong, .dark-mode .ticket-result span { color: #dce5f2; }
+.dark-mode .bettor-chip { color: #dce5f2; background: #18244d; border-color: #52618a; box-shadow: 0 2px 0 rgb(0 0 0 / 24%); }
+.dark-mode .bettor-chip > strong { color: var(--night); background: var(--lime); border-color: #a77e18; }
+.dark-mode .bettors-empty, .dark-mode .ticket-result span { color: #96a5c2; }
 .dark-mode .ticket-result { border-color: #52618a; }
 .dark-mode .ticket-teams small { color: #96a5c2; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(15px); } }
@@ -384,6 +418,8 @@ input::placeholder { color: #647b8c; }
   .odds-button { min-height: 64px; }
   .bet-controls { flex-wrap: wrap; }
   .stake-stepper { flex-basis: 100%; }
+  .bettors { flex-direction: column; gap: 8px; }
+  .bettors-label { margin-top: 0; }
   .ticket-row { grid-template-columns: 1fr; padding: 16px; }
   .ticket-teams { grid-template-columns: 30px 1fr 42px 1fr 30px; gap: 7px; }
   .ticket-teams .team-crest, .ticket-teams .crest-fallback { width: 30px; height: 30px; }

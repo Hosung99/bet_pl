@@ -18,7 +18,7 @@ import {
 } from './auth.js'
 import { createUser, grantWeeklyPoints } from './domain/points.js'
 import { normalizeNickname } from './domain/profile.js'
-import { ensureMatchesFresh, syncMatches } from './football.js'
+import { ensureMatchesFresh, getStandings, syncMatches } from './football.js'
 import { reverseSettlement, settleMatch } from './settlement.js'
 
 const app = express()
@@ -175,6 +175,8 @@ app.get('/api/matches', requireAuth, async (req, res) => {
   )
   res.json({ matches: result.rows, syncWarning })
 })
+
+app.get('/api/standings', requireAuth, async (_req, res) => res.json(await getStandings()))
 
 app.put('/api/bets/:matchId', requireAuth, async (req, res) => {
   const matchId = Number(req.params.matchId)
