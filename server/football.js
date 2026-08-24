@@ -15,8 +15,22 @@ function winnerFrom(match) {
   return null
 }
 
-export function normalizeStandings(payload) {
+function recentForms(matches) {
+  const forms = {}
+  for (const match of [...matches].sort((a, b) => new Date(b.utc_date) - new Date(a.utc_date))) {
+    const home = match.winner === 'DRAW' ? 'D' : match.winner === 'HOME' ? 'W' : 'L'
+    const away = match.winner === 'DRAW' ? 'D' : match.winner === 'AWAY' ? 'W' : 'L'
+    for (const [teamId, result] of [[match.home_team_id, home], [match.away_team_id, away]]) {
+      if (!forms[teamId]) forms[teamId] = []
+      if (forms[teamId].length < 5) forms[teamId].push(result)
+    }
+  }
+  return forms
+}
+
+export function normalizeStandings(payload, matches = []) {
   const total = payload.standings?.find((standing) => standing.type === 'TOTAL')
+  const forms = recentForms(matches)
   return {
     currentMatchday: Number(payload.season?.currentMatchday) || null,
     table: (total?.table || []).map((row) => ({
@@ -36,6 +50,7 @@ export function normalizeStandings(payload) {
       goalsAgainst: Number(row.goalsAgainst),
       goalDifference: Number(row.goalDifference),
       points: Number(row.points),
+      form: (forms[row.team?.id] || []).reverse(),
     })),
   }
 }
@@ -48,14 +63,21 @@ export async function getStandings() {
     throw Object.assign(new Error('FOOTBALL_DATA_TOKEN이 설정되지 않았습니다.'), { status: 503 })
   }
   if (!standingsInFlight) {
-    standingsInFlight = fetch(STANDINGS_API_URL, {
+    standingsInFlight = ensureMatchesFresh().then(() => fetch(STANDINGS_API_URL, {
       headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_TOKEN },
       signal: AbortSignal.timeout(15_000),
-    }).then(async (response) => {
+    })).then(async (response) => {
       if (!response.ok) {
         throw Object.assign(new Error(`순위 데이터 조회 실패 (${response.status})`), { status: 502 })
       }
-      const data = normalizeStandings(await response.json())
+      const payload = await response.json()
+      const matches = await pool.query(
+        `SELECT utc_date, home_team_id, away_team_id, winner
+         FROM matches
+         WHERE status = 'FINISHED' AND winner IS NOT NULL AND utc_date >= $1`,
+        [payload.season?.startDate || '1970-01-01'],
+      )
+      const data = normalizeStandings(payload, matches.rows)
       standingsCache = { data, fetchedAt: Date.now() }
       return data
     }).finally(() => {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api.js";
+import { TAB_PATHS, tabFromPath } from "./navigation.js";
 import { calculateOdds } from "./odds.js";
 
 const PICKS = [
@@ -7,6 +8,7 @@ const PICKS = [
   ["DRAW", "무승부"],
   ["AWAY", "원정승"],
 ];
+const FORM_LABELS = { W: "승", D: "무", L: "패" };
 const MATCH_PAGE_SIZE = 8;
 
 const point = new Intl.NumberFormat("ko-KR");
@@ -539,7 +541,7 @@ function MatchCard({ match, onSaved, notify }) {
         </span>
         {bettors.length ? (
           <ul className="bettor-list" aria-label="베팅 참여자와 베팅금액">
-            {bettors.map((bettor, index) => (
+            {bettors.slice(0, 10).map((bettor, index) => (
               <li
                 className="bettor-chip"
                 key={`${bettor.nickname}-${index}`}
@@ -549,6 +551,25 @@ function MatchCard({ match, onSaved, notify }) {
                 <strong>{point.format(Number(bettor.stake))}</strong>
               </li>
             ))}
+            {bettors.length > 10 && (
+              <li className="bettor-more">
+                <button
+                  className="bettor-more-trigger"
+                  type="button"
+                  aria-label={`전체 베팅 참여자 ${bettors.length}명 보기`}
+                >
+                  … +{bettors.length - 10}
+                </button>
+                <ul className="bettor-popover">
+                  {bettors.map((bettor, index) => (
+                    <li key={`${bettor.nickname}-${index}`}>
+                      <span>{bettor.nickname}</span>
+                      <strong>{formatPoint(bettor.stake)}</strong>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            )}
           </ul>
         ) : (
           <em className="bettors-empty">첫 베팅을 기다리는 중</em>
@@ -756,6 +777,7 @@ function PremierLeagueStandings({ standings }) {
                 <th scope="col">무</th>
                 <th scope="col">패</th>
                 <th scope="col">득실</th>
+                <th scope="col">최근 5경기</th>
                 <th scope="col">승점</th>
               </tr>
             </thead>
@@ -778,6 +800,18 @@ function PremierLeagueStandings({ standings }) {
                   <td>{row.lost}</td>
                   <td className={row.goalDifference > 0 ? "positive" : ""}>
                     {row.goalDifference > 0 ? "+" : ""}{row.goalDifference}
+                  </td>
+                  <td>
+                    <span className="pl-form">
+                      {row.form?.length ? row.form.map((result, index) => (
+                        <span
+                          className={`form-result form-${result.toLowerCase()}`}
+                          key={`${result}-${index}`}
+                        >
+                          {FORM_LABELS[result]}
+                        </span>
+                      )) : "—"}
+                    </span>
                   </td>
                   <td><strong className="pl-points">{row.points}</strong></td>
                 </tr>
@@ -1266,7 +1300,7 @@ function Admin({ users, matches, currentUser, reload, notify }) {
 export default function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [tab, setTab] = useState("dashboard");
+  const [tab, setTab] = useState(() => tabFromPath(window.location.pathname));
   const [matches, setMatches] = useState([]);
   const [standings, setStandings] = useState(null);
   const [bets, setBets] = useState([]);
@@ -1282,6 +1316,14 @@ export default function App() {
   const notify = useCallback((message, type = "success") => {
     setToast({ message, type });
     window.setTimeout(() => setToast(null), 3500);
+  }, []);
+
+  const navigate = useCallback((nextTab, replace = false) => {
+    const path = TAB_PATHS[nextTab];
+    if (window.location.pathname !== path) {
+      window.history[replace ? "replaceState" : "pushState"](null, "", path);
+    }
+    setTab(nextTab);
   }, []);
 
   const loadMatches = useCallback(async () => {
@@ -1326,13 +1368,25 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
+    const restoreTab = () => setTab(tabFromPath(window.location.pathname));
+    window.addEventListener("popstate", restoreTab);
+    return () => window.removeEventListener("popstate", restoreTab);
+  }, []);
+
+  useEffect(() => {
+    if (user && tab === "admin" && user.role !== "ADMIN") {
+      navigate("dashboard", true);
+    }
+  }, [user?.role, tab, navigate]);
+
+  useEffect(() => {
     const expire = () => {
       setUser(null);
-      setTab("dashboard");
+      navigate("dashboard", true);
     };
     window.addEventListener("matchpot:session-expired", expire);
     return () => window.removeEventListener("matchpot:session-expired", expire);
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (!user) return;
@@ -1355,7 +1409,7 @@ export default function App() {
   async function logout() {
     await api("/api/auth/logout", { method: "POST" });
     setUser(null);
-    setTab("dashboard");
+    navigate("dashboard", true);
   }
 
   const navItems = useMemo(
@@ -1382,7 +1436,7 @@ export default function App() {
       <header className="topbar">
         <button
           className="brand brand-button"
-          onClick={() => setTab("dashboard")}
+          onClick={() => navigate("dashboard")}
         >
           <span className="brand-mark">BP</span>
           <span>
@@ -1394,7 +1448,7 @@ export default function App() {
             <button
               key={key}
               className={tab === key ? "active" : ""}
-              onClick={() => setTab(key)}
+              onClick={() => navigate(key)}
             >
               {label}
             </button>
@@ -1448,7 +1502,7 @@ export default function App() {
             notify={notify}
             onEdit={(matchId) => {
               setFocusedMatchId(matchId);
-              setTab("dashboard");
+              navigate("dashboard");
             }}
           />
         )}
