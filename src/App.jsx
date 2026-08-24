@@ -150,21 +150,21 @@ function Login({ onLogin }) {
               <input
                 autoComplete="username"
                 minLength="2"
-                maxLength="40"
-                pattern="[a-zA-Z0-9._-]{2,40}"
-                title="영문, 숫자, 점, 밑줄, 하이픈으로 2~40자"
+                maxLength="100"
+                pattern="[a-zA-Z0-9._-]{2,100}"
+                title="영문, 숫자, 점, 밑줄, 하이픈으로 2~100자"
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
                 required
               />
             </label>
             <label>
-              <span>{registering ? "비밀번호 (8~12자)" : "비밀번호"}</span>
+              <span>{registering ? "비밀번호 (8~20자)" : "비밀번호"}</span>
               <input
                 type="password"
                 autoComplete={registering ? "new-password" : "current-password"}
                 minLength={registering ? 8 : 1}
-                maxLength={registering ? 12 : 100}
+                maxLength={registering ? 20 : 100}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required
@@ -442,7 +442,7 @@ function MatchCard({ match, onSaved, notify }) {
           ) : (
             <span>VS</span>
           )}
-          <small>MW {match.matchday || "-"}</small>
+          <small>{match.matchday ? `${match.matchday}라운드` : "라운드 미정"}</small>
         </div>
         <div className="team away-team">
           <TeamCrest src={match.away_team_crest} name={match.away_team_name} />
@@ -534,7 +534,14 @@ function MatchCard({ match, onSaved, notify }) {
       )}
       <footer className="bettors">
         <span>BETTORS</span>
-        <strong>{match.bettors?.join(", ") || "아직 없음"}</strong>
+        <strong>
+          {match.bettors
+            ?.map(
+              (bettor) =>
+                `${bettor.nickname} · ${formatPoint(bettor.stake)}`,
+            )
+            .join(", ") || "아직 없음"}
+        </strong>
       </footer>
     </article>
   );
@@ -921,7 +928,7 @@ function UserRow({ entry, currentUser, run, notify }) {
 
   async function resetPassword() {
     const password = window.prompt(
-      `${entry.username}의 새 비밀번호를 입력하세요. (8~12자)`,
+      `${entry.username}의 새 비밀번호를 입력하세요. (8~20자)`,
     );
     if (!password) return;
     try {
@@ -1105,6 +1112,7 @@ function Admin({ users, matches, currentUser, reload, notify }) {
           <form className="create-user" onSubmit={create}>
             <input
               placeholder="아이디"
+              maxLength="100"
               value={form.username}
               onChange={(event) =>
                 setForm({ ...form, username: event.target.value })
@@ -1114,8 +1122,8 @@ function Admin({ users, matches, currentUser, reload, notify }) {
             <input
               type="password"
               minLength="8"
-              maxLength="12"
-              placeholder="비밀번호 8~12자"
+              maxLength="20"
+              placeholder="비밀번호 8~20자"
               value={form.password}
               onChange={(event) =>
                 setForm({ ...form, password: event.target.value })

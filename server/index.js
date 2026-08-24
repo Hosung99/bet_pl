@@ -6,7 +6,16 @@ import helmet from 'helmet'
 import { rateLimit } from 'express-rate-limit'
 import bcrypt from 'bcryptjs'
 import { pool, transaction } from './db.js'
-import { authenticate, requireAdmin, requireAuth, sessionCookie, startSession, verifyPassword } from './auth.js'
+import {
+  authenticate,
+  requireAdmin,
+  requireAuth,
+  sessionCookie,
+  startSession,
+  validPassword,
+  validUsername,
+  verifyPassword,
+} from './auth.js'
 import { createUser, grantWeeklyPoints } from './domain/points.js'
 import { normalizeNickname } from './domain/profile.js'
 import { ensureMatchesFresh, syncMatches } from './football.js'
@@ -40,14 +49,6 @@ const authLimiter = rateLimit({
   message: { error: '인증 요청이 너무 많습니다. 잠시 후 다시 시도하세요.' },
 })
 
-function validUsername(username) {
-  return typeof username === 'string' && /^[a-zA-Z0-9._-]{2,40}$/.test(username)
-}
-
-function validPassword(password) {
-  return typeof password === 'string' && password.length >= 8 && password.length <= 12
-}
-
 function validLoginPassword(password) {
   return typeof password === 'string' && password.length > 0 && password.length <= 100
 }
@@ -76,7 +77,7 @@ app.get('/api/health', async (_req, res) => {
 app.post('/api/auth/register', authLimiter, async (req, res) => {
   const { username, password } = req.body || {}
   if (!validUsername(username) || !validPassword(password)) {
-    return res.status(400).json({ error: '아이디와 8~12자 비밀번호를 확인하세요.' })
+    return res.status(400).json({ error: '아이디와 8~20자 비밀번호를 확인하세요.' })
   }
 
   const passwordHash = await bcrypt.hash(password, 12)
@@ -157,13 +158,12 @@ app.get('/api/matches', requireAuth, async (req, res) => {
        COUNT(b.id) FILTER (WHERE b.status <> 'CANCELLED' AND b.prediction = 'AWAY')::int AS away_bettors,
        mine.prediction AS my_prediction, mine.stake AS my_stake,
        mine.status AS my_bet_status, mine.payout AS my_payout,
-       ARRAY(
-         SELECT u.nickname
+       COALESCE((
+         SELECT json_agg(json_build_object('nickname', u.nickname, 'stake', participant.stake) ORDER BY u.nickname)
          FROM bets participant
          JOIN users u ON u.id = participant.user_id
          WHERE participant.match_id = m.id AND participant.status <> 'CANCELLED'
-         ORDER BY u.nickname
-       ) AS bettors
+       ), '[]'::json) AS bettors
      FROM matches m
      LEFT JOIN bets b ON b.match_id = m.id
      LEFT JOIN bets mine ON mine.match_id = m.id AND mine.user_id = $1
@@ -301,7 +301,7 @@ app.get('/api/admin/users', requireAdmin, async (_req, res) => {
 app.post('/api/admin/users', requireAdmin, async (req, res) => {
   const { username, password, role = 'MEMBER' } = req.body || {}
   if (!validUsername(username) || !validPassword(password) || !['ADMIN', 'MEMBER'].includes(role)) {
-    return res.status(400).json({ error: '아이디, 8~12자 비밀번호와 역할을 확인하세요.' })
+    return res.status(400).json({ error: '아이디, 8~20자 비밀번호와 역할을 확인하세요.' })
   }
   const passwordHash = await bcrypt.hash(password, 12)
   try {
@@ -354,7 +354,7 @@ app.post('/api/admin/users/:userId/points', requireAdmin, async (req, res) => {
 
 app.post('/api/admin/users/:userId/password', requireAdmin, async (req, res) => {
   const password = req.body?.password
-  if (!validPassword(password)) return res.status(400).json({ error: '비밀번호는 8~12자여야 합니다.' })
+  if (!validPassword(password)) return res.status(400).json({ error: '비밀번호는 8~20자여야 합니다.' })
   const passwordHash = await bcrypt.hash(password, 12)
   const result = await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [passwordHash, req.params.userId])
   if (!result.rowCount) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' })

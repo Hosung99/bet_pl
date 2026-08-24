@@ -5,6 +5,14 @@ import { grantWeeklyPoints } from './domain/points.js'
 
 const SESSION_DAYS = 7
 
+export function validUsername(username) {
+  return typeof username === 'string' && /^[a-zA-Z0-9._-]{2,100}$/.test(username)
+}
+
+export function validPassword(password) {
+  return typeof password === 'string' && password.length >= 8 && password.length <= 20
+}
+
 function parseCookies(header = '') {
   return Object.fromEntries(
     header.split(';').map((part) => part.trim().split('=').map(decodeURIComponent)).filter(([key]) => key),

@@ -1,9 +1,10 @@
 import bcrypt from 'bcryptjs'
+import { validPassword, validUsername } from '../auth.js'
 import { pool, transaction } from '../db.js'
 import { createUser } from '../domain/points.js'
 
 const username = process.argv[2]
-if (!username || !/^[a-zA-Z0-9._-]{2,40}$/.test(username)) {
+if (!validUsername(username)) {
   console.error('Usage: npm run create-admin -- <username>')
   process.exit(1)
 }
@@ -39,7 +40,7 @@ function readPassword(prompt) {
 
 try {
   const password = await readPassword('Admin password: ')
-  if (password.length < 8 || password.length > 12) throw new Error('비밀번호는 8~12자여야 합니다.')
+  if (!validPassword(password)) throw new Error('비밀번호는 8~20자여야 합니다.')
   const passwordHash = await bcrypt.hash(password, 12)
   const user = await transaction((client) => createUser(client, { username, passwordHash, role: 'ADMIN' }))
   console.log(`Admin created: ${user.username}`)
