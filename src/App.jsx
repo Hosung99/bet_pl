@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "./api.js";
+import { helpAutoOpenKey, helpDismissKey, helpDismissMarker } from "./help.js";
 import { TAB_PATHS, tabFromPath } from "./navigation.js";
 import { calculateOdds } from "./odds.js";
 
@@ -106,14 +107,14 @@ function Login({ onLogin }) {
           </span>
         </div>
         <div className="login-copy">
-          <p className="matchday-label"><span>2026 / 27</span> OFFICE LEAGUE</p>
+          <p className="matchday-label">
+            <span>2026 / 27</span> OFFICE LEAGUE
+          </p>
           <h1>
             킥오프 전,
             <strong>당신의 선택.</strong>
           </h1>
-          <p>
-            승·무·패를 예측하고 동료들과 포인트 순위를 겨룹니다.
-          </p>
+          <p>승·무·패를 예측하고 동료들과 포인트 순위를 겨룹니다.</p>
         </div>
         <div className="tunnel-status" aria-hidden="true">
           <span>SEOUL</span>
@@ -134,8 +135,12 @@ function Login({ onLogin }) {
             <b>26/27</b>
           </div>
           <div className="pass-details" aria-hidden="true">
-            <span>COMPETITION <b>PREMIER LEAGUE</b></span>
-            <span>ZONE <b>SEOUL</b></span>
+            <span>
+              COMPETITION <b>PREMIER LEAGUE</b>
+            </span>
+            <span>
+              ZONE <b>SEOUL</b>
+            </span>
           </div>
           <div className="pass-body">
             <p className="eyebrow">
@@ -220,6 +225,178 @@ function Stat({ label, value, accent }) {
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function NotificationBell({ notifications, onRead }) {
+  const [open, setOpen] = useState(false);
+  const unreadNotifications = notifications.filter((item) => !item.read_at);
+  const unread = unreadNotifications.length;
+
+  function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && unread) onRead(unreadNotifications.map((item) => item.id));
+  }
+
+  return (
+    <div className="notifications">
+      <span className="sr-only" role="status">
+        {unread
+          ? `읽지 않은 경기 결과 알림 ${unread}개`
+          : "읽지 않은 경기 결과 알림이 없습니다."}
+      </span>
+      <button
+        className="notification-bell"
+        type="button"
+        aria-label={`알림${unread ? ` ${unread}개 읽지 않음` : " 없음"}`}
+        aria-expanded={open}
+        aria-controls="notification-popover"
+        onClick={toggle}
+      >
+        <span aria-hidden="true">🔔</span>
+        {unread > 0 && <b>{unread > 99 ? "99+" : unread}</b>}
+      </button>
+      {open && (
+        <section
+          id="notification-popover"
+          className="notification-popover"
+          aria-label="경기 결과 알림"
+        >
+          <header>
+            <strong>경기 결과</strong>
+            <small>최근 50개</small>
+          </header>
+          {notifications.length ? (
+            <ul>
+              {notifications.map((item) => (
+                <li key={item.id} className={item.read_at ? "" : "unread"}>
+                  <strong>{item.result === "WON" ? "적중" : "미적중"}</strong>
+                  <span>
+                    {item.home_team_name} {item.home_score} : {item.away_score}{" "}
+                    {item.away_team_name}
+                  </span>
+                  <small>
+                    {item.result === "WON"
+                      ? `+${formatPoint(item.payout)}`
+                      : `${pickLabel(item.prediction)} 선택`}
+                  </small>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>새 알림이 없습니다.</p>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
+
+function HelpDialog({ onClose, onDismissToday }) {
+  const dialog = useRef(null);
+  const returnFocus = useRef(document.activeElement);
+
+  useEffect(() => {
+    dialog.current?.showModal();
+    return () => {
+      if (dialog.current?.open) dialog.current.close();
+      returnFocus.current?.focus();
+    };
+  }, []);
+
+  return (
+    <dialog
+      ref={dialog}
+      className="help-dialog"
+      aria-labelledby="help-title"
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
+      <div className="help-dialog-body">
+        <header>
+          <div>
+            <p className="eyebrow">BET-PL GUIDE</p>
+            <h2 id="help-title">베팅 이용 안내</h2>
+          </div>
+          <button
+            autoFocus
+            className="help-close"
+            type="button"
+            style={{ cursor: "pointer" }}
+            onClick={onClose}
+            aria-label="도움말 닫기"
+          >
+            ×
+          </button>
+        </header>
+        <ol>
+          <li>
+            <strong>배당</strong>
+            <span>
+              참여 인원에 따라 달라지며 화면에는 소수점 둘째 자리까지
+              표시됩니다. 최종 배당은 베팅 마감 시 참여 현황으로 결정됩니다.
+            </span>
+          </li>
+          <li>
+            <strong>베팅</strong>
+            <span>
+              경기 시작 전까지만 등록·변경·취소할 수 있고, 취소하면 베팅
+              포인트를 전액 돌려받습니다.
+            </span>
+          </li>
+          <li>
+            <strong>정산</strong>
+            <span>
+              적중자는 베팅금액 × 최종 배당을 내림한 포인트를 받습니다. 적중자가
+              없으면 베팅 풀과 잭팟이 다음 경기로 이월됩니다.
+            </span>
+          </li>
+          <li>
+            <strong>잭팟</strong>
+            <span>
+              적중자가 있으면 각 적중자의 베팅금액 비율에 따라 나누어
+              지급됩니다.
+            </span>
+          </li>
+          <li>
+            <strong>포인트</strong>
+            <span>
+              회원가입 즉시 1,000P를 받습니다. 이후 로그인 시 서울 시간 매주
+              월요일 00:00을 기준으로 주 1회 1,000P를 받습니다.
+            </span>
+          </li>
+          <li>
+            <strong>결과 시각</strong>
+            <span>
+              표시 시각은 서울 시간입니다. 공식 종료 경기 데이터가 동기화된 뒤
+              자동 정산되므로 실제 종료 직후와 차이가 날 수 있습니다.
+            </span>
+          </li>
+        </ol>
+        <footer>
+          <button
+            className="text-button"
+            type="button"
+            style={{ cursor: "pointer" }}
+            onClick={onDismissToday}
+          >
+            오늘 하루 그만 보기
+          </button>
+          <button
+            className="primary-button"
+            type="button"
+            style={{ cursor: "pointer" }}
+            onClick={onClose}
+          >
+            확인
+          </button>
+        </footer>
+      </div>
+    </dialog>
   );
 }
 
@@ -445,7 +622,9 @@ function MatchCard({ match, onSaved, notify }) {
           ) : (
             <span>VS</span>
           )}
-          <small>{match.matchday ? `${match.matchday}라운드` : "라운드 미정"}</small>
+          <small>
+            {match.matchday ? `${match.matchday}라운드` : "라운드 미정"}
+          </small>
         </div>
         <div className="team away-team">
           <TeamCrest src={match.away_team_crest} name={match.away_team_name} />
@@ -626,11 +805,7 @@ function Dashboard({
   const hasMore = visible.length < filtered.length;
 
   useEffect(() => {
-    if (
-      !hasMore ||
-      !loadMoreRef.current ||
-      !("IntersectionObserver" in window)
-    )
+    if (!hasMore || !loadMoreRef.current || !("IntersectionObserver" in window))
       return;
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -784,10 +959,15 @@ function PremierLeagueStandings({ standings }) {
             <tbody>
               {standings.table.map((row) => (
                 <tr key={row.team.id}>
-                  <td><b className="pl-position">{row.position}</b></td>
+                  <td>
+                    <b className="pl-position">{row.position}</b>
+                  </td>
                   <td>
                     <span className="pl-team">
-                      <TeamCrest src={row.team.crest} name={row.team.shortName} />
+                      <TeamCrest
+                        src={row.team.crest}
+                        name={row.team.shortName}
+                      />
                       <span>
                         <strong>{row.team.shortName || row.team.name}</strong>
                         <small>{row.team.tla}</small>
@@ -799,21 +979,26 @@ function PremierLeagueStandings({ standings }) {
                   <td>{row.draw}</td>
                   <td>{row.lost}</td>
                   <td className={row.goalDifference > 0 ? "positive" : ""}>
-                    {row.goalDifference > 0 ? "+" : ""}{row.goalDifference}
+                    {row.goalDifference > 0 ? "+" : ""}
+                    {row.goalDifference}
                   </td>
                   <td>
                     <span className="pl-form">
-                      {row.form?.length ? row.form.map((result, index) => (
-                        <span
-                          className={`form-result form-${result.toLowerCase()}`}
-                          key={`${result}-${index}`}
-                        >
-                          {FORM_LABELS[result]}
-                        </span>
-                      )) : "—"}
+                      {row.form?.length
+                        ? row.form.map((result, index) => (
+                            <span
+                              className={`form-result form-${result.toLowerCase()}`}
+                              key={`${result}-${index}`}
+                            >
+                              {FORM_LABELS[result]}
+                            </span>
+                          ))
+                        : "—"}
                     </span>
                   </td>
-                  <td><strong className="pl-points">{row.points}</strong></td>
+                  <td>
+                    <strong className="pl-points">{row.points}</strong>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1306,12 +1491,19 @@ export default function App() {
   const [bets, setBets] = useState([]);
   const [leaders, setLeaders] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [syncWarning, setSyncWarning] = useState("");
   const [toast, setToast] = useState(null);
   const [focusedMatchId, setFocusedMatchId] = useState(null);
   const [darkMode, setDarkMode] = useState(
     () => window.localStorage.getItem("bet-pl-theme") === "dark",
   );
+  const helpAutoOpened = useRef(new Set());
+  const notificationAbort = useRef(null);
+  const notificationEpoch = useRef(0);
+  const currentUserId = useRef(user?.id);
+  currentUserId.current = user?.id;
 
   const notify = useCallback((message, type = "success") => {
     setToast({ message, type });
@@ -1340,8 +1532,7 @@ export default function App() {
   const loadCurrentTab = useCallback(
     async (currentTab, currentUser) => {
       if (currentTab === "dashboard") await loadMatches();
-      if (currentTab === "standings")
-        setStandings(await api("/api/standings"));
+      if (currentTab === "standings") setStandings(await api("/api/standings"));
       if (currentTab === "bets") setBets((await api("/api/bets")).bets);
       if (currentTab === "leaderboard")
         setLeaders((await api("/api/leaderboard")).users);
@@ -1381,6 +1572,9 @@ export default function App() {
 
   useEffect(() => {
     const expire = () => {
+      notificationAbort.current?.abort();
+      setNotifications([]);
+      setHelpOpen(false);
       setUser(null);
       navigate("dashboard", true);
     };
@@ -1392,6 +1586,89 @@ export default function App() {
     if (!user) return;
     loadCurrentTab(tab, user).catch((error) => notify(error.message, "error"));
   }, [user?.id, tab, loadCurrentTab, notify]);
+
+  useEffect(() => {
+    setNotifications([]);
+    if (!user) return;
+    const userId = user.id;
+    const controller = new AbortController();
+    notificationAbort.current = controller;
+    let active = true;
+    const loadNotifications = async () => {
+      const epoch = ++notificationEpoch.current;
+      try {
+        const result = await api("/api/notifications", {
+          signal: controller.signal,
+        });
+        if (
+          active &&
+          epoch === notificationEpoch.current &&
+          currentUserId.current === userId
+        ) {
+          setNotifications(result.notifications);
+        }
+      } catch (error) {
+        if (error.name !== "AbortError")
+          console.error("알림 갱신 실패:", error);
+      }
+    };
+    loadNotifications();
+    const timer = window.setInterval(loadNotifications, 60 * 60 * 1000);
+    return () => {
+      active = false;
+      notificationEpoch.current += 1;
+      controller.abort();
+      if (notificationAbort.current === controller)
+        notificationAbort.current = null;
+      window.clearInterval(timer);
+      setNotifications([]);
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
+    setHelpOpen(false);
+    if (!user) return;
+    const now = new Date();
+    const marker = helpDismissMarker(now);
+    const autoOpenKey = helpAutoOpenKey(user.id, now);
+    if (helpAutoOpened.current.has(autoOpenKey)) return;
+    helpAutoOpened.current.add(autoOpenKey);
+    if (window.localStorage.getItem(helpDismissKey(user.id)) !== marker)
+      setHelpOpen(true);
+  }, [user?.id]);
+
+  const closeHelp = useCallback(() => setHelpOpen(false), []);
+
+  const dismissHelpToday = useCallback(() => {
+    window.localStorage.setItem(helpDismissKey(user.id), helpDismissMarker());
+    setHelpOpen(false);
+  }, [user?.id]);
+
+  async function readNotifications(ids) {
+    const userId = user.id;
+    notificationEpoch.current += 1;
+    try {
+      await api("/api/notifications/read", {
+        method: "PATCH",
+        body: JSON.stringify({ ids }),
+        signal: notificationAbort.current?.signal,
+      });
+      if (currentUserId.current !== userId) return;
+      notificationEpoch.current += 1;
+      const readIds = new Set(ids);
+      setNotifications((current) =>
+        current.map((item) => ({
+          ...item,
+          read_at: readIds.has(item.id)
+            ? item.read_at || new Date().toISOString()
+            : item.read_at,
+        })),
+      );
+    } catch (error) {
+      if (error.name !== "AbortError" && currentUserId.current === userId)
+        notify(error.message, "error");
+    }
+  }
 
   async function onSaved(balance) {
     setUser((current) => ({ ...current, balance }));
@@ -1407,9 +1684,13 @@ export default function App() {
   }
 
   async function logout() {
-    await api("/api/auth/logout", { method: "POST" });
-    setUser(null);
-    navigate("dashboard", true);
+    try {
+      await api("/api/auth/logout", { method: "POST" });
+      setUser(null);
+      navigate("dashboard", true);
+    } catch (error) {
+      notify(error.message, "error");
+    }
   }
 
   const navItems = useMemo(
@@ -1460,6 +1741,20 @@ export default function App() {
             <strong>{user.nickname || user.username}</strong>
           </span>
           <b>{formatPoint(user.balance)}</b>
+          <button
+            className="help-button"
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={helpOpen}
+            onClick={() => setHelpOpen(true)}
+          >
+            도움말
+          </button>
+          <NotificationBell
+            key={user.id}
+            notifications={notifications}
+            onRead={readNotifications}
+          />
           <button
             className="theme-toggle"
             type="button"
@@ -1527,6 +1822,9 @@ export default function App() {
         <div className={`toast toast-${toast.type}`} role="status">
           {toast.message}
         </div>
+      )}
+      {helpOpen && (
+        <HelpDialog onClose={closeHelp} onDismissToday={dismissHelpToday} />
       )}
     </div>
   );

@@ -64,6 +64,18 @@ CREATE TABLE IF NOT EXISTS bets (
 CREATE INDEX IF NOT EXISTS bets_match_id_idx ON bets(match_id);
 CREATE INDEX IF NOT EXISTS bets_user_id_idx ON bets(user_id);
 
+CREATE TABLE IF NOT EXISTS notifications (
+  id BIGSERIAL PRIMARY KEY,
+  bet_id BIGINT NOT NULL REFERENCES bets(id) ON DELETE CASCADE,
+  result VARCHAR(4) NOT NULL CHECK (result IN ('WON', 'LOST')),
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (bet_id)
+);
+
+ALTER TABLE notifications DROP COLUMN IF EXISTS user_id;
+CREATE INDEX IF NOT EXISTS notifications_created_idx ON notifications(created_at DESC, id DESC);
+
 CREATE TABLE IF NOT EXISTS point_transactions (
   id BIGSERIAL PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES users(id),

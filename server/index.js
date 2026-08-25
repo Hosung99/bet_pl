@@ -16,10 +16,11 @@ import {
   validUsername,
   verifyPassword,
 } from './auth.js'
+import { getNotifications, markNotificationsRead } from './domain/notifications.js'
 import { createUser, grantWeeklyPoints, setUserActive } from './domain/points.js'
 import { normalizeNickname } from './domain/profile.js'
 import { ensureMatchesFresh, getStandings, syncMatches } from './football.js'
-import { reverseSettlement, settleMatch } from './settlement.js'
+import { correctMatchSettlement } from './settlement.js'
 
 const app = express()
 const port = Number(process.env.PORT || 3000)
@@ -281,6 +282,20 @@ app.get('/api/bets', requireAuth, async (req, res) => {
   res.json({ bets: result.rows })
 })
 
+app.get('/api/notifications', requireAuth, async (req, res) => {
+  try {
+    await ensureMatchesFresh()
+  } catch (error) {
+    console.error('알림 조회 전 일정 동기화 실패:', error.message)
+  }
+  res.json({ notifications: await getNotifications(pool, req.user.id) })
+})
+
+app.patch('/api/notifications/read', requireAuth, async (req, res) => {
+  await markNotificationsRead(pool, req.user.id, req.body?.ids)
+  res.status(204).end()
+})
+
 app.get('/api/leaderboard', requireAuth, async (_req, res) => {
   const result = await pool.query(
     `SELECT u.id, u.username, u.nickname, u.balance,
@@ -373,18 +388,7 @@ app.post('/api/admin/matches/:matchId/settle', requireAdmin, async (req, res) =>
   if (![matchId, homeScore, awayScore].every(Number.isSafeInteger) || homeScore < 0 || awayScore < 0) {
     return res.status(400).json({ error: '유효한 경기와 최종 점수를 입력하세요.' })
   }
-  const result = await transaction(async (client) => {
-    await reverseSettlement(client, matchId)
-    const winner = homeScore === awayScore ? 'DRAW' : homeScore > awayScore ? 'HOME' : 'AWAY'
-    const updated = await client.query(
-      `UPDATE matches
-       SET status = 'FINISHED', home_score = $1, away_score = $2, winner = $3
-       WHERE id = $4 RETURNING id`,
-      [homeScore, awayScore, winner, matchId],
-    )
-    if (!updated.rowCount) throw Object.assign(new Error('경기를 찾을 수 없습니다.'), { status: 404 })
-    return settleMatch(client, matchId)
-  })
+  const result = await transaction((client) => correctMatchSettlement(client, matchId, homeScore, awayScore))
   res.json(result)
 })
 

@@ -79,6 +79,12 @@ export async function settleMatch(client, matchId) {
     const payout = outcome.payouts.get(String(bet.id)) || 0
     const status = bet.prediction === match.winner ? 'WON' : 'LOST'
     await client.query('UPDATE bets SET status = $1, payout = $2, updated_at = NOW() WHERE id = $3', [status, payout, bet.id])
+    await client.query(
+      `INSERT INTO notifications (bet_id, result)
+       VALUES ($1, $2)
+       ON CONFLICT (bet_id) DO NOTHING`,
+      [bet.id, status],
+    )
     if (payout > 0) {
       await client.query('UPDATE users SET balance = balance + $1 WHERE id = $2', [payout, bet.user_id])
       await client.query(
@@ -158,7 +164,35 @@ export async function reverseSettlement(client, matchId) {
      WHERE match_id = $1 AND status <> 'CANCELLED'`,
     [matchId],
   )
+  await client.query(
+    'DELETE FROM notifications WHERE bet_id IN (SELECT id FROM bets WHERE match_id = $1)',
+    [matchId],
+  )
   await client.query('DELETE FROM settlements WHERE match_id = $1', [matchId])
   await client.query('UPDATE matches SET settled_at = NULL WHERE id = $1', [matchId])
   return true
+}
+
+export async function correctMatchSettlement(client, matchId, homeScore, awayScore) {
+  const locked = await client.query(
+    'SELECT id, settled_at, home_score, away_score FROM matches WHERE id = $1 FOR UPDATE',
+    [matchId],
+  )
+  if (!locked.rowCount) throw Object.assign(new Error('경기를 찾을 수 없습니다.'), { status: 404 })
+  const match = locked.rows[0]
+  if (match.settled_at && Number(match.home_score) === homeScore && Number(match.away_score) === awayScore) {
+    return { alreadySettled: true }
+  }
+
+  await reverseSettlement(client, matchId)
+  let winner = 'DRAW'
+  if (homeScore > awayScore) winner = 'HOME'
+  else if (awayScore > homeScore) winner = 'AWAY'
+  await client.query(
+    `UPDATE matches
+     SET status = 'FINISHED', home_score = $1, away_score = $2, winner = $3
+     WHERE id = $4`,
+    [homeScore, awayScore, winner, matchId],
+  )
+  return settleMatch(client, matchId)
 }
