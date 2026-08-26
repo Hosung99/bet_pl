@@ -1208,7 +1208,7 @@ function MyPage({ user, bets, onUserChange, onEdit, notify }) {
 }
 
 function Leaderboard({ users, currentUser }) {
-  const [criterion, setCriterion] = useState("points");
+  const [criterion, setCriterion] = useState("winRate");
   const rankedUsers = [...users].sort((a, b) => {
     if (criterion === "winRate") {
       const aRate = Number(a.settled_bets)
