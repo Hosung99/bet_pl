@@ -192,6 +192,8 @@ input::placeholder { color: #647b8c; }
 .segmented { display: flex; padding: 4px; border: 1px solid var(--line); background: #151f46; border-radius: 20px; }
 .segmented button { min-height: 36px; padding: 0 17px; border: 0; border-radius: 3px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 800; }
 .segmented button.active { color: var(--ink); background: var(--paper); border-radius: 17px; }
+.dashboard-filters { display: flex; align-items: center; gap: 10px; }
+.month-filter input { width: 155px; min-height: 46px; color-scheme: dark; }
 .fixture-day { margin-bottom: 44px; }
 .fixture-day > h3 { margin: 0 0 14px; display: flex; align-items: center; gap: 14px; color: #b6c7d2; font-size: 13px; }
 .fixture-day > h3::after { content: ""; height: 1px; flex: 1; background: var(--line); }
@@ -455,6 +457,12 @@ input::placeholder { color: #647b8c; }
   .section-head { align-items: center; }
   .section-head h2 { font-size: 40px; }
   .section-note { display: none; }
+  .match-section-head { align-items: stretch; flex-direction: column; }
+  .dashboard-filters { width: 100%; }
+  .month-filter { flex: 1; }
+  .month-filter input { width: 100%; }
+  .leaderboard-section-head { align-items: stretch; flex-direction: column; }
+  .leaderboard-section-head .segmented button { flex: 1; }
   .profile-card { margin-bottom: 44px; }
   .profile-identity { padding: 22px 18px; flex-wrap: wrap; }
   .nickname-form { min-width: 100%; margin-left: 0; }

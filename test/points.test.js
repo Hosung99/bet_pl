@@ -1,11 +1,41 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createUser, seoulWeekStart, setUserActive } from '../server/domain/points.js'
+import {
+  createUser,
+  grantDailyAttendancePoints,
+  seoulDate,
+  setUserActive,
+} from '../server/domain/points.js'
 
-test('서울 시간 월요일 0시를 주간 지급 기준으로 사용한다', () => {
-  assert.equal(seoulWeekStart(new Date('2026-08-23T14:59:59Z')), '2026-08-17')
-  assert.equal(seoulWeekStart(new Date('2026-08-23T15:00:00Z')), '2026-08-24')
-  assert.equal(seoulWeekStart(new Date('2026-08-29T14:00:00Z')), '2026-08-24')
+test('서울 시간 자정을 출석 지급 기준으로 사용한다', () => {
+  assert.equal(seoulDate(new Date('2026-08-23T14:59:59Z')), '2026-08-23')
+  assert.equal(seoulDate(new Date('2026-08-23T15:00:00Z')), '2026-08-24')
+})
+
+test('하루 첫 접속에만 출석 포인트 200P를 지급한다', async () => {
+  const calls = []
+  const client = {
+    async query(sql, params) {
+      calls.push([sql, params])
+      return { rowCount: calls.length === 1 ? 1 : 0, rows: [] }
+    },
+  }
+
+  assert.equal(await grantDailyAttendancePoints(client, 7, new Date('2026-08-23T15:00:00Z')), true)
+  assert.match(calls[0][0], /INSERT INTO weekly_grants/)
+  assert.deepEqual(calls.map(([, params]) => params), [
+    [7, '2026-08-24', 200],
+    [200, 7],
+    [7, 200, '2026-08-24'],
+  ])
+
+  calls.length = 0
+  client.query = async (sql, params) => {
+    calls.push([sql, params])
+    return { rowCount: 0, rows: [] }
+  }
+  assert.equal(await grantDailyAttendancePoints(client, 7, new Date('2026-08-24T00:00:00Z')), false)
+  assert.equal(calls.length, 1)
 })
 
 test('회원가입은 아이디와 기본 닉네임을 별도 SQL 파라미터로 저장한다', async () => {

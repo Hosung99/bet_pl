@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { transaction } from './db.js'
-import { grantWeeklyPoints } from './domain/points.js'
+import { grantDailyAttendancePoints } from './domain/points.js'
 
 const SESSION_DAYS = 7
 
@@ -58,7 +58,7 @@ export async function authenticate(req, _res, next) {
         [hashToken(token)],
       )
       if (!result.rowCount) return null
-      await grantWeeklyPoints(client, result.rows[0].id)
+      await grantDailyAttendancePoints(client, result.rows[0].id)
       const refreshed = await client.query(
         'SELECT id, username, nickname, role, active, balance FROM users WHERE id = $1',
         [result.rows[0].id],

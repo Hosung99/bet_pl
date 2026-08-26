@@ -38,6 +38,13 @@ function formatPoint(value) {
   return `${point.format(Number(value || 0))}P`;
 }
 
+function seoulMonth(value = new Date()) {
+  const date = new Date(value);
+  return new Date(date.getTime() + 9 * 60 * 60 * 1_000)
+    .toISOString()
+    .slice(0, 7);
+}
+
 function pickLabel(pick) {
   return PICKS.find(([key]) => key === pick)?.[1] || "-";
 }
@@ -365,8 +372,8 @@ function HelpDialog({ onClose, onDismissToday }) {
           <li>
             <strong>포인트</strong>
             <span>
-              회원가입 즉시 1,000P를 받습니다. 이후 로그인 시 서울 시간 매주
-              월요일 00:00을 기준으로 주 1회 1,000P를 받습니다.
+              회원가입 즉시 1,000P를 받습니다. 이후 서울 시간 기준 하루 첫
+              접속 시 출석 포인트 200P를 받습니다.
             </span>
           </li>
           <li>
@@ -724,9 +731,14 @@ function MatchCard({ match, onSaved, notify }) {
               <li
                 className="bettor-chip"
                 key={`${bettor.nickname}-${index}`}
-                aria-label={`${bettor.nickname}, ${formatPoint(bettor.stake)} 베팅`}
+                aria-label={`${bettor.nickname}${bettor.role === "ADMIN" ? ", 관리자" : ""}, ${formatPoint(bettor.stake)} 베팅`}
               >
-                <span>{bettor.nickname}</span>
+                <span>
+                  {bettor.nickname}
+                  {bettor.role === "ADMIN" && (
+                    <span aria-hidden="true"> 👑</span>
+                  )}
+                </span>
                 <strong>{point.format(Number(bettor.stake))}</strong>
               </li>
             ))}
@@ -742,7 +754,14 @@ function MatchCard({ match, onSaved, notify }) {
                 <ul className="bettor-popover">
                   {bettors.map((bettor, index) => (
                     <li key={`${bettor.nickname}-${index}`}>
-                      <span>{bettor.nickname}</span>
+                      <span
+                        aria-label={`${bettor.nickname}${bettor.role === "ADMIN" ? ", 관리자" : ""}`}
+                      >
+                        {bettor.nickname}
+                        {bettor.role === "ADMIN" && (
+                          <span aria-hidden="true"> 👑</span>
+                        )}
+                      </span>
                       <strong>{formatPoint(bettor.stake)}</strong>
                     </li>
                   ))}
@@ -767,11 +786,16 @@ function Dashboard({
   onFocusHandled,
 }) {
   const [showFinished, setShowFinished] = useState(false);
+  const [finishedMonth, setFinishedMonth] = useState(() => seoulMonth());
   const [heroMatchId, setHeroMatchId] = useState(null);
   const [visibleCount, setVisibleCount] = useState(MATCH_PAGE_SIZE);
   const loadMoreRef = useRef(null);
+  const currentMonth = seoulMonth();
 
-  useEffect(() => setVisibleCount(MATCH_PAGE_SIZE), [showFinished]);
+  useEffect(
+    () => setVisibleCount(MATCH_PAGE_SIZE),
+    [showFinished, finishedMonth],
+  );
 
   useEffect(() => {
     if (!focusedMatchId) return;
@@ -799,7 +823,10 @@ function Dashboard({
   }, [focusedMatchId, matches, onFocusHandled, visibleCount]);
 
   const filtered = matches.filter((match) =>
-    showFinished ? match.status === "FINISHED" : match.status !== "FINISHED",
+    showFinished
+      ? match.status === "FINISHED" &&
+        seoulMonth(match.utc_date) === finishedMonth
+      : match.status !== "FINISHED",
   );
   const visible = filtered.slice(0, visibleCount);
   const hasMore = visible.length < filtered.length;
@@ -851,30 +878,57 @@ function Dashboard({
         onPrevious={() => setHeroMatchId(upcoming[heroIndex - 1].id)}
         onNext={() => setHeroMatchId(upcoming[heroIndex + 1].id)}
       />
-      <div className="section-head">
+      <div className="section-head match-section-head">
         <div>
           <p className="eyebrow">MATCHDAY PROGRAMME</p>
           <h2>{showFinished ? "종료 경기" : "다가오는 경기"}</h2>
         </div>
-        <div className="segmented">
-          <button
-            className={!showFinished ? "active" : ""}
-            onClick={() => setShowFinished(false)}
-          >
-            예정
-          </button>
-          <button
-            className={showFinished ? "active" : ""}
-            onClick={() => setShowFinished(true)}
-          >
-            종료
-          </button>
+        <div className="dashboard-filters">
+          {showFinished && (
+            <label className="month-filter">
+              <span className="sr-only">종료 경기 월</span>
+              <input
+                type="month"
+                max={currentMonth}
+                value={finishedMonth}
+                onChange={(event) => {
+                  if (
+                    event.target.value &&
+                    event.target.value <= currentMonth
+                  )
+                    setFinishedMonth(event.target.value);
+                }}
+              />
+            </label>
+          )}
+          <div className="segmented">
+            <button
+              className={!showFinished ? "active" : ""}
+              onClick={() => setShowFinished(false)}
+            >
+              예정
+            </button>
+            <button
+              className={showFinished ? "active" : ""}
+              onClick={() => setShowFinished(true)}
+            >
+              종료
+            </button>
+          </div>
         </div>
       </div>
       {Object.keys(groups).length === 0 && (
         <Empty
-          title="표시할 경기가 없습니다."
-          body="일정을 동기화하거나 다른 경기 상태를 선택하세요."
+          title={
+            showFinished
+              ? "선택한 월에 종료된 경기가 없습니다."
+              : "표시할 경기가 없습니다."
+          }
+          body={
+            showFinished
+              ? "다른 과거 월을 선택하세요."
+              : "일정을 동기화하거나 다른 경기 상태를 선택하세요."
+          }
         />
       )}
       {Object.entries(groups).map(([day, fixtures]) => (
@@ -1154,23 +1208,61 @@ function MyPage({ user, bets, onUserChange, onEdit, notify }) {
 }
 
 function Leaderboard({ users, currentUser }) {
+  const [criterion, setCriterion] = useState("points");
+  const rankedUsers = [...users].sort((a, b) => {
+    if (criterion === "winRate") {
+      const aRate = Number(a.settled_bets)
+        ? Number(a.wins) / Number(a.settled_bets)
+        : -1;
+      const bRate = Number(b.settled_bets)
+        ? Number(b.wins) / Number(b.settled_bets)
+        : -1;
+      return (
+        bRate - aRate ||
+        Number(b.wins) - Number(a.wins) ||
+        Number(b.balance) - Number(a.balance)
+      );
+    }
+    return (
+      Number(b.balance) - Number(a.balance) ||
+      Number(b.wins) - Number(a.wins)
+    );
+  });
+
   return (
     <section>
-      <div className="section-head">
+      <div className="section-head leaderboard-section-head">
         <div>
           <p className="eyebrow">OFFICE TABLE</p>
-          <h2>포인트 순위</h2>
+          <h2>{criterion === "winRate" ? "승률 순위" : "포인트 순위"}</h2>
         </div>
-        <p className="section-note">잔액 · 적중 수 기준</p>
+        <div className="segmented" aria-label="순위 기준">
+          <button
+            type="button"
+            className={criterion === "winRate" ? "active" : ""}
+            aria-pressed={criterion === "winRate"}
+            onClick={() => setCriterion("winRate")}
+          >
+            승률 기준
+          </button>
+          <button
+            type="button"
+            className={criterion === "points" ? "active" : ""}
+            aria-pressed={criterion === "points"}
+            onClick={() => setCriterion("points")}
+          >
+            현재 포인트
+          </button>
+        </div>
       </div>
       <div className="leaderboard">
         <div className="leaderboard-head">
           <span>순위</span>
           <span>플레이어</span>
           <span>적중 / 정산</span>
-          <span>포인트</span>
+          <span>{criterion === "winRate" ? "승률" : "현재 포인트"}</span>
         </div>
-        {users.map((entry, index) => (
+        {rankedUsers.map((entry, index) => (
           <div
             className={`leaderboard-row ${Number(entry.id) === Number(currentUser.id) ? "is-me" : ""}`}
             key={entry.id}
@@ -1190,7 +1282,13 @@ function Leaderboard({ users, currentUser }) {
             <span>
               {entry.wins} / {entry.settled_bets}
             </span>
-            <strong>{formatPoint(entry.balance)}</strong>
+            <strong>
+              {criterion === "winRate"
+                ? Number(entry.settled_bets)
+                  ? `${((Number(entry.wins) / Number(entry.settled_bets)) * 100).toFixed(1)}%`
+                  : "—"
+                : formatPoint(entry.balance)}
+            </strong>
           </div>
         ))}
       </div>
@@ -1254,13 +1352,16 @@ function UserRow({ entry, currentUser, run, notify }) {
     <div className="admin-user-row">
       <span>
         <b>{entry.username}</b>
-        <small>{entry.role}</small>
+        <small>
+          {entry.nickname || entry.username} · {entry.role}
+        </small>
       </span>
       <strong>{formatPoint(entry.balance)}</strong>
       <label>
         <span className="sr-only">조정 포인트</span>
         <input
           type="number"
+          step="100"
           placeholder="+ / - 포인트"
           value={amount}
           onChange={(event) => setAmount(event.target.value)}
@@ -1765,7 +1866,21 @@ export default function App() {
             <span aria-hidden="true">{darkMode ? "☀" : "☾"}</span>
           </button>
           <button className="logout" onClick={logout} aria-label="로그아웃">
-            ↗
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M10 17l5-5-5-5" />
+              <path d="M15 12H3" />
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+            </svg>
           </button>
         </div>
       </header>

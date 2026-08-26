@@ -17,7 +17,7 @@ import {
   verifyPassword,
 } from './auth.js'
 import { getNotifications, markNotificationsRead } from './domain/notifications.js'
-import { createUser, grantWeeklyPoints, setUserActive } from './domain/points.js'
+import { createUser, grantDailyAttendancePoints, setUserActive } from './domain/points.js'
 import { normalizeNickname } from './domain/profile.js'
 import { ensureMatchesFresh, getStandings, syncMatches } from './football.js'
 import { correctMatchSettlement } from './settlement.js'
@@ -112,7 +112,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 
   const token = await transaction(async (client) => {
     await client.query('DELETE FROM sessions WHERE expires_at <= NOW()')
-    await grantWeeklyPoints(client, user.id)
+    await grantDailyAttendancePoints(client, user.id)
     return startSession(client, user.id)
   })
   res.setHeader('Set-Cookie', sessionCookie(token))
@@ -160,7 +160,7 @@ app.get('/api/matches', requireAuth, async (req, res) => {
        mine.prediction AS my_prediction, mine.stake AS my_stake,
        mine.status AS my_bet_status, mine.payout AS my_payout,
        COALESCE((
-         SELECT json_agg(json_build_object('nickname', u.nickname, 'stake', participant.stake) ORDER BY u.nickname)
+         SELECT json_agg(json_build_object('nickname', u.nickname, 'role', u.role, 'stake', participant.stake) ORDER BY u.nickname)
          FROM bets participant
          JOIN users u ON u.id = participant.user_id
          WHERE participant.match_id = m.id AND participant.status <> 'CANCELLED'
@@ -168,10 +168,8 @@ app.get('/api/matches', requireAuth, async (req, res) => {
      FROM matches m
      LEFT JOIN bets b ON b.match_id = m.id
      LEFT JOIN bets mine ON mine.match_id = m.id AND mine.user_id = $1
-     WHERE m.utc_date >= NOW() - INTERVAL '30 days'
      GROUP BY m.id, mine.prediction, mine.stake, mine.status, mine.payout
-     ORDER BY m.utc_date, m.id
-     LIMIT 240`,
+     ORDER BY m.utc_date, m.id`,
     [req.user.id],
   )
   res.json({ matches: result.rows, syncWarning })

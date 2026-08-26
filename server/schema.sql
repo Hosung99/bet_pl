@@ -89,6 +89,8 @@ CREATE TABLE IF NOT EXISTS point_transactions (
 
 CREATE INDEX IF NOT EXISTS point_transactions_user_id_idx ON point_transactions(user_id, created_at DESC);
 
+-- Legacy name retained so old and new server instances can coexist during deployment.
+-- week_start stores the Seoul attendance date for the current daily grant rule.
 CREATE TABLE IF NOT EXISTS weekly_grants (
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   week_start DATE NOT NULL,
@@ -96,6 +98,15 @@ CREATE TABLE IF NOT EXISTS weekly_grants (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (user_id, week_start)
 );
+
+DO $$
+BEGIN
+  IF to_regclass('attendance_grants') IS NOT NULL THEN
+    INSERT INTO weekly_grants (user_id, week_start, amount)
+    SELECT user_id, attendance_date, amount FROM attendance_grants
+    ON CONFLICT DO NOTHING;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS settlements (
   match_id BIGINT PRIMARY KEY REFERENCES matches(id),
