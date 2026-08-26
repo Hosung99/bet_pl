@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ko } from "date-fns/locale";
+import DatePicker from "react-datepicker";
 import { api } from "./api.js";
+import {
+  FINISHED_MONTH_MIN,
+  isFinishedMatchInMonth,
+  monthDate,
+  monthValue,
+  seoulMonth,
+} from "./finishedMatches.js";
 import { helpAutoOpenKey, helpDismissKey, helpDismissMarker } from "./help.js";
 import { TAB_PATHS, tabFromPath } from "./navigation.js";
 import { calculateOdds } from "./odds.js";
@@ -36,13 +45,6 @@ const timeLabel = new Intl.DateTimeFormat("ko-KR", {
 
 function formatPoint(value) {
   return `${point.format(Number(value || 0))}P`;
-}
-
-function seoulMonth(value = new Date()) {
-  const date = new Date(value);
-  return new Date(date.getTime() + 9 * 60 * 60 * 1_000)
-    .toISOString()
-    .slice(0, 7);
 }
 
 function pickLabel(pick) {
@@ -822,12 +824,10 @@ function Dashboard({
     return () => window.cancelAnimationFrame(frame);
   }, [focusedMatchId, matches, onFocusHandled, visibleCount]);
 
-  const filtered = matches.filter((match) =>
-    showFinished
-      ? match.status === "FINISHED" &&
-        seoulMonth(match.utc_date) === finishedMonth
-      : match.status !== "FINISHED",
-  );
+  const filtered = matches.filter((match) => {
+    if (!showFinished) return match.status !== "FINISHED";
+    return isFinishedMatchInMonth(match, finishedMonth);
+  });
   const visible = filtered.slice(0, visibleCount);
   const hasMore = visible.length < filtered.length;
 
@@ -887,17 +887,16 @@ function Dashboard({
           {showFinished && (
             <label className="month-filter">
               <span className="sr-only">종료 경기 월</span>
-              <input
-                type="month"
-                max={currentMonth}
-                value={finishedMonth}
-                onChange={(event) => {
-                  if (
-                    event.target.value &&
-                    event.target.value <= currentMonth
-                  )
-                    setFinishedMonth(event.target.value);
-                }}
+              <DatePicker
+                selected={monthDate(finishedMonth)}
+                minDate={monthDate(FINISHED_MONTH_MIN)}
+                maxDate={monthDate(currentMonth)}
+                onChange={(date) => date && setFinishedMonth(monthValue(date))}
+                locale={ko}
+                dateFormat="yyyy년 M월"
+                showMonthYearPicker
+                showIcon
+                calendarIconClassName="month-filter-icon"
               />
             </label>
           )}

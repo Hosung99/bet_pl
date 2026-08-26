@@ -193,7 +193,22 @@ input::placeholder { color: #647b8c; }
 .segmented button { min-height: 36px; padding: 0 17px; border: 0; border-radius: 3px; background: transparent; color: var(--muted); font-size: 12px; font-weight: 800; }
 .segmented button.active { color: var(--ink); background: var(--paper); border-radius: 17px; }
 .dashboard-filters { display: flex; align-items: center; gap: 10px; }
-.month-filter input { width: 155px; min-height: 46px; color-scheme: dark; }
+.month-filter .react-datepicker-wrapper { width: 170px; }
+.month-filter .react-datepicker__view-calendar-icon input { width: 100%; min-height: 46px; padding: 0 40px 0 14px; color: var(--paper); background: #151f46; border: 1px solid var(--line); border-radius: 23px; font-weight: 800; cursor: pointer; }
+.month-filter .month-filter-icon { top: 50%; right: 12px; left: auto; width: 18px; height: 18px; padding: 0; fill: var(--lime); transform: translateY(-50%); }
+.react-datepicker-popper { z-index: 30; }
+.react-datepicker { color: var(--paper); background: #111b3b; border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); font-family: inherit; overflow: hidden; }
+.react-datepicker__triangle { display: none; }
+.react-datepicker__header { padding: 16px 12px 10px; background: #192552; border-bottom-color: var(--line); }
+.react-datepicker__current-month { color: var(--paper); font-size: 15px; }
+.react-datepicker__navigation { top: 13px; border-radius: 50%; }
+.react-datepicker__navigation:hover { background: rgb(255 255 255 / 8%); }
+.react-datepicker__navigation-icon::before { border-color: var(--blue); }
+.react-datepicker__month { margin: 10px; }
+.react-datepicker__month-text { width: 64px; margin: 4px; padding: 10px 4px; color: var(--muted); border-radius: 10px; font-weight: 800; }
+.react-datepicker__month-text:not([aria-disabled="true"]):hover { color: var(--paper); background: var(--panel-2); }
+.react-datepicker__month-text--selected, .react-datepicker__month-text--keyboard-selected { color: var(--night); background: var(--lime); }
+.react-datepicker__month-text--disabled { color: #586887; opacity: .5; }
 .fixture-day { margin-bottom: 44px; }
 .fixture-day > h3 { margin: 0 0 14px; display: flex; align-items: center; gap: 14px; color: #b6c7d2; font-size: 13px; }
 .fixture-day > h3::after { content: ""; height: 1px; flex: 1; background: var(--line); }
