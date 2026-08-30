@@ -160,7 +160,7 @@ app.get('/api/matches', requireAuth, async (req, res) => {
        mine.prediction AS my_prediction, mine.stake AS my_stake,
        mine.status AS my_bet_status, mine.payout AS my_payout,
        COALESCE((
-         SELECT json_agg(json_build_object('nickname', u.nickname, 'role', u.role, 'stake', participant.stake) ORDER BY u.nickname)
+         SELECT json_agg(json_build_object('nickname', u.nickname, 'role', u.role, 'stake', participant.stake, 'status', participant.status) ORDER BY u.nickname)
          FROM bets participant
          JOIN users u ON u.id = participant.user_id
          WHERE participant.match_id = m.id AND participant.status <> 'CANCELLED'

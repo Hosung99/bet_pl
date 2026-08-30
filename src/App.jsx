@@ -5,9 +5,13 @@ import { api } from "./api.js";
 import {
   FINISHED_MONTH_MIN,
   isFinishedMatchInMonth,
+  isMatchInSchedule,
+  isWinningPrediction,
   monthDate,
   monthValue,
   seoulMonth,
+  unseenWinningMatchIds,
+  winCelebrationKey,
 } from "./finishedMatches.js";
 import { helpAutoOpenKey, helpDismissKey, helpDismissMarker } from "./help.js";
 import { TAB_PATHS, tabFromPath } from "./navigation.js";
@@ -20,6 +24,16 @@ const PICKS = [
 ];
 const FORM_LABELS = { W: "승", D: "무", L: "패" };
 const MATCH_PAGE_SIZE = 8;
+const FIREWORK_BURSTS = [
+  ["18%", "30%", "#ffca43", "0s"],
+  ["48%", "20%", "#59d0c4", ".28s"],
+  ["78%", "32%", "#ff7658", ".56s"],
+  ["64%", "58%", "#31b67a", ".84s"],
+];
+const FIREWORK_RAYS = Array.from(
+  { length: 12 },
+  (_, index) => `${index * 30}deg`,
+);
 
 const point = new Intl.NumberFormat("ko-KR");
 const dateTime = new Intl.DateTimeFormat("ko-KR", {
@@ -233,6 +247,35 @@ function Stat({ label, value, accent }) {
     <div className={`stat ${accent ? "stat-accent" : ""}`}>
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+function Fireworks() {
+  return (
+    <div className="fireworks" aria-hidden="true">
+      {FIREWORK_BURSTS.map(([left, top, color, delay], burstIndex) => (
+        <span
+          className="firework"
+          key={`${left}-${top}`}
+          style={{
+            left,
+            top,
+            "--firework-color": color,
+            "--firework-delay": delay,
+          }}
+        >
+          {FIREWORK_RAYS.map((angle, rayIndex) => (
+            <i
+              key={angle}
+              style={{
+                "--firework-angle": angle,
+                "--firework-distance": `-${82 + ((burstIndex + rayIndex) % 3) * 18}px`,
+              }}
+            />
+          ))}
+        </span>
+      ))}
     </div>
   );
 }
@@ -502,6 +545,7 @@ function Hero({
 function OddsButton({
   label,
   selected,
+  correct,
   pool,
   bettors,
   totalBettors,
@@ -512,11 +556,14 @@ function OddsButton({
   return (
     <button
       type="button"
-      className={`odds-button ${selected ? "selected" : ""}`}
+      className={`odds-button ${selected ? "selected" : ""} ${correct ? "correct" : ""}`}
       disabled={disabled}
       onClick={onClick}
     >
-      <span>{label}</span>
+      <span>
+        {label}
+        {correct && <b className="odds-correct">정답</b>}
+      </span>
       <strong>{odds}</strong>
       <small>
         {bettors}명 · {formatPoint(pool)}
@@ -551,6 +598,15 @@ function MatchCard({ match, onSaved, notify }) {
     0,
   );
   const bettors = match.bettors || [];
+  const isWinningBettor = (bettor) =>
+    match.status === "FINISHED" && bettor.status === "WON";
+  const orderedBettors =
+    match.status === "FINISHED"
+      ? [...bettors].sort(
+          (left, right) =>
+            Number(isWinningBettor(right)) - Number(isWinningBettor(left)),
+        )
+      : bettors;
 
   async function save() {
     if (!pick)
@@ -648,6 +704,7 @@ function MatchCard({ match, onSaved, notify }) {
           <OddsButton
             key={key}
             label={label}
+            correct={isWinningPrediction(match, key)}
             pool={pools[key]}
             bettors={bettorCounts[key]}
             totalBettors={totalBettors}
@@ -729,13 +786,18 @@ function MatchCard({ match, onSaved, notify }) {
         </span>
         {bettors.length ? (
           <ul className="bettor-list" aria-label="베팅 참여자와 베팅금액">
-            {bettors.slice(0, 10).map((bettor, index) => (
+            {orderedBettors.slice(0, 10).map((bettor, index) => (
               <li
-                className="bettor-chip"
+                className={`bettor-chip ${isWinningBettor(bettor) ? "bettor-winner" : ""}`}
                 key={`${bettor.nickname}-${index}`}
-                aria-label={`${bettor.nickname}${bettor.role === "ADMIN" ? ", 관리자" : ""}, ${formatPoint(bettor.stake)} 베팅`}
+                aria-label={`${bettor.nickname}${bettor.role === "ADMIN" ? ", 관리자" : ""}, ${formatPoint(bettor.stake)} 베팅${isWinningBettor(bettor) ? ", 적중" : ""}`}
               >
                 <span>
+                  {isWinningBettor(bettor) && (
+                    <b className="bettor-check" aria-hidden="true">
+                      ✓
+                    </b>
+                  )}
                   {bettor.nickname}
                   {bettor.role === "ADMIN" && (
                     <span aria-hidden="true"> 👑</span>
@@ -754,11 +816,21 @@ function MatchCard({ match, onSaved, notify }) {
                   … +{bettors.length - 10}
                 </button>
                 <ul className="bettor-popover">
-                  {bettors.map((bettor, index) => (
-                    <li key={`${bettor.nickname}-${index}`}>
+                  {orderedBettors.map((bettor, index) => (
+                    <li
+                      className={
+                        isWinningBettor(bettor) ? "bettor-winner" : ""
+                      }
+                      key={`${bettor.nickname}-${index}`}
+                    >
                       <span
-                        aria-label={`${bettor.nickname}${bettor.role === "ADMIN" ? ", 관리자" : ""}`}
+                        aria-label={`${bettor.nickname}${bettor.role === "ADMIN" ? ", 관리자" : ""}${isWinningBettor(bettor) ? ", 적중" : ""}`}
                       >
+                        {isWinningBettor(bettor) && (
+                          <b className="bettor-check" aria-hidden="true">
+                            ✓
+                          </b>
+                        )}
                         {bettor.nickname}
                         {bettor.role === "ADMIN" && (
                           <span aria-hidden="true"> 👑</span>
@@ -791,8 +863,35 @@ function Dashboard({
   const [finishedMonth, setFinishedMonth] = useState(() => seoulMonth());
   const [heroMatchId, setHeroMatchId] = useState(null);
   const [visibleCount, setVisibleCount] = useState(MATCH_PAGE_SIZE);
+  const [celebrationId, setCelebrationId] = useState("");
   const loadMoreRef = useRef(null);
   const currentMonth = seoulMonth();
+  const now = new Date();
+
+  useEffect(() => {
+    const storageKey = winCelebrationKey(user.id);
+    let seenIds = [];
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(storageKey) || "[]");
+      if (Array.isArray(stored)) seenIds = stored;
+    } catch {
+      seenIds = [];
+    }
+    const unseenIds = unseenWinningMatchIds(
+      matches.filter((match) => isMatchInSchedule(match)),
+      seenIds,
+    );
+    if (!unseenIds.length) return;
+    try {
+      window.localStorage.setItem(
+        storageKey,
+        JSON.stringify([...new Set([...seenIds.map(String), ...unseenIds])]),
+      );
+    } catch {
+      // ponytail: browser-only dedupe; persist server-side if cross-device replay matters.
+    }
+    setCelebrationId(unseenIds.join("-"));
+  }, [matches, user.id]);
 
   useEffect(
     () => setVisibleCount(MATCH_PAGE_SIZE),
@@ -825,8 +924,8 @@ function Dashboard({
   }, [focusedMatchId, matches, onFocusHandled, visibleCount]);
 
   const filtered = matches.filter((match) => {
-    if (!showFinished) return match.status !== "FINISHED";
-    return isFinishedMatchInMonth(match, finishedMonth);
+    if (!showFinished) return isMatchInSchedule(match, now);
+    return isFinishedMatchInMonth(match, finishedMonth, now);
   });
   const visible = filtered.slice(0, visibleCount);
   const hasMore = visible.length < filtered.length;
@@ -869,6 +968,14 @@ function Dashboard({
 
   return (
     <>
+      {celebrationId && (
+        <>
+          <Fireworks key={celebrationId} />
+          <span className="sr-only" role="status">
+            베팅 적중을 축하합니다!
+          </span>
+        </>
+      )}
       <Hero
         match={next}
         balance={user.balance}
@@ -881,7 +988,7 @@ function Dashboard({
       <div className="section-head match-section-head">
         <div>
           <p className="eyebrow">MATCHDAY PROGRAMME</p>
-          <h2>{showFinished ? "종료 경기" : "다가오는 경기"}</h2>
+          <h2>{showFinished ? "종료 경기" : "경기 일정"}</h2>
         </div>
         <div className="dashboard-filters">
           {showFinished && (
@@ -905,7 +1012,7 @@ function Dashboard({
               className={!showFinished ? "active" : ""}
               onClick={() => setShowFinished(false)}
             >
-              예정
+              일정
             </button>
             <button
               className={showFinished ? "active" : ""}
